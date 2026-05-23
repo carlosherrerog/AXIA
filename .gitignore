@@ -32,6 +32,7 @@ build/
 # Claude
 CLAUDE.md
 .claudeignore
+.mcp.json
 /home/carlitos/.claude/projects/
 
 # Misc
