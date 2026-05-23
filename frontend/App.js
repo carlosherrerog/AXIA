@@ -351,7 +351,7 @@ function AppNavigator() {
   return (
     <NavigationContainer ref={navigationRef} linking={linking}>
       <Stack.Navigator initialRouteName="Auth" screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Auth"           component={AuthScreen} />
+        <Stack.Screen name="Login"           component={AuthScreen} />
         <Stack.Screen name="RoleSelection"  component={RoleSelectionScreen} />
         <Stack.Screen name="Admin"          component={AdminScreen} />
         <Stack.Screen name="UserDashboard"  component={UserDashboard} />

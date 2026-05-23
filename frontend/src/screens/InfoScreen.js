@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  Animated, Platform, useWindowDimensions, Image,
+  Animated, Platform, useWindowDimensions, Image, Linking,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
@@ -265,6 +265,58 @@ const SECTIONS = [
     ],
   },
   {
+    id: 'contratos',
+    icon: 'code-slash',
+    color: '#10b981',
+    title: 'Contratos en Polygon',
+    content: [
+      {
+        type: 'paragraph',
+        text: 'Los contratos inteligentes de AXIA están desplegados en la mainnet de Polygon y son de acceso público. Puedes verificar su código y todas las transacciones históricas en Polygonscan.',
+      },
+      {
+        type: 'contract',
+        icon: 'diamond',
+        color: '#8b5cf6',
+        label: 'WatchNFT',
+        description: 'NFT ERC-721 · Autenticación de relojes con NFC',
+        address: '0x8725a60F432EDCaA3dF1d7987e99B9C18c465988',
+      },
+      {
+        type: 'contract',
+        icon: 'storefront',
+        color: '#10b981',
+        label: 'WatchMarketplace',
+        description: 'Listados, Escrow y comisiones del marketplace',
+        address: '0x57057749e6aF1b21070FA2A4e5D4359AA2711735',
+      },
+      {
+        type: 'contract',
+        icon: 'hammer',
+        color: '#f59e0b',
+        label: 'WatchAuction',
+        description: 'Sistema de subastas exclusivo para Dealers',
+        address: '0xe7Be5Fd0162f7f2fbC5851FB9DC2f5b4b81F63d6',
+      },
+      {
+        type: 'contract',
+        icon: 'shield-checkmark',
+        color: '#38bdf8',
+        label: 'WatchSignature',
+        description: 'Verificación criptográfica de firmas',
+        address: '0x967187957d31d0912aE57cad1B51F764339AaEe6',
+      },
+      {
+        type: 'contract',
+        icon: 'cash',
+        color: '#06b6d4',
+        label: 'MockUSDC',
+        description: 'Stablecoin USDC utilizada en las transacciones',
+        address: '0xbBfCa1b8404Dc43238C4A359E8454632f00c292F',
+      },
+    ],
+  },
+  {
     id: 'seguridad',
     icon: 'shield-checkmark',
     color: '#ef4444',
@@ -300,8 +352,21 @@ const SECTIONS = [
 function AccordionSection({ section, isLast }) {
   const { colors } = useTheme();
   const [open, setOpen] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState(null);
   const animHeight = useRef(new Animated.Value(0)).current;
   const animRotate = useRef(new Animated.Value(0)).current;
+
+  const copyAddress = async (address) => {
+    await Clipboard.setStringAsync(address);
+    setCopiedAddress(address);
+    setTimeout(() => setCopiedAddress(null), 2000);
+  };
+
+  const openPolygonscan = (address) => {
+    Linking.openURL(`https://polygonscan.com/address/${address}`);
+  };
+
+  const shortAddress = (addr) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
   const toggle = () => {
     const toValue = open ? 0 : 1;
@@ -444,6 +509,67 @@ function AccordionSection({ section, isLast }) {
                   <View style={{ flex: 1, gap: 3 }}>
                     <Text style={{ color: block.color, fontSize: 13, fontWeight: '700' }}>{block.label}</Text>
                     <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 19 }}>{block.text}</Text>
+                  </View>
+                </View>
+              );
+            }
+            if (block.type === 'contract') {
+              const isCopied = copiedAddress === block.address;
+              return (
+                <View key={i} style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: 12, borderWidth: 1, borderColor: colors.border,
+                  padding: 12, gap: 10,
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={{
+                      width: 32, height: 32, borderRadius: 9,
+                      backgroundColor: block.color + '18',
+                      borderWidth: 1, borderColor: block.color + '40',
+                      alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}>
+                      <Ionicons name={block.icon} size={15} color={block.color} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: block.color, fontSize: 13, fontWeight: '700' }}>{block.label}</Text>
+                      <Text style={{ color: colors.textMuted, fontSize: 11, lineHeight: 16 }}>{block.description}</Text>
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      onPress={() => copyAddress(block.address)}
+                      style={{
+                        flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
+                        backgroundColor: isCopied ? '#10b98112' : colors.backgroundAlt,
+                        borderRadius: 8, borderWidth: 1,
+                        borderColor: isCopied ? '#10b98140' : colors.border,
+                        paddingHorizontal: 10, paddingVertical: 7,
+                      }}
+                    >
+                      <Ionicons
+                        name={isCopied ? 'checkmark-circle' : 'copy-outline'}
+                        size={13}
+                        color={isCopied ? '#10b981' : colors.textMuted}
+                      />
+                      <Text style={{
+                        color: isCopied ? '#10b981' : colors.textSecondary,
+                        fontSize: 12, fontWeight: '600', fontVariant: ['tabular-nums'],
+                      }}>
+                        {isCopied ? '¡Copiada!' : shortAddress(block.address)}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => openPolygonscan(block.address)}
+                      style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 5,
+                        backgroundColor: '#8b5cf612',
+                        borderRadius: 8, borderWidth: 1, borderColor: '#8b5cf630',
+                        paddingHorizontal: 10, paddingVertical: 7,
+                      }}
+                    >
+                      <Ionicons name="open-outline" size={13} color="#8b5cf6" />
+                      <Text style={{ color: '#8b5cf6', fontSize: 12, fontWeight: '600' }}>Polygonscan</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               );
