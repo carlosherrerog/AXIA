@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" fill="none">
+  <defs>
+    <mask id="wc" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+      <rect width="1024" height="1024" fill="white"></rect>
+      <circle cx="512" cy="512" r="211.354" fill="black"></circle>
+    </mask>
+  </defs>
+  <rect width="1024" height="1024" rx="230.400" ry="230.400" fill="#000000"></rect>
+  <g mask="url(#wc)">
+  <polygon points="186.163,512 120.115,626.398 -11.981,626.398 -78.029,512 -11.981,397.602 120.115,397.602" fill="none" stroke="#a855f7" stroke-width="30.822" stroke-linejoin="round" opacity="0.5"></polygon>
+  <polygon points="423.936,512 344.678,649.278 186.163,649.278 106.906,512 186.163,374.722 344.678,374.722" fill="none" stroke="#a855f7" stroke-width="33.024" stroke-linejoin="round" opacity="1"></polygon>
+  <polygon points="917.094,512 837.837,649.278 679.322,649.278 600.064,512 679.322,374.722 837.837,374.722" fill="none" stroke="#a855f7" stroke-width="33.024" stroke-linejoin="round" opacity="1"></polygon>
+  <polygon points="1102.029,512 1035.981,626.398 903.885,626.398 837.837,512 903.885,397.602 1035.981,397.602" fill="none" stroke="#a855f7" stroke-width="30.822" stroke-linejoin="round" opacity="0.5"></polygon>
+  </g>
+  <circle cx="512" cy="512" r="184.934" fill="none"></circle>
+  <circle cx="512" cy="512" r="184.934" stroke="#a855f7" stroke-width="26.419" fill="none"></circle>
+  <line x1="512" y1="512" x2="512" y2="410.286" stroke="#a855f7" stroke-width="22.016" stroke-linecap="round"></line>
+  <line x1="512" y1="512" x2="591.337" y2="512" stroke="#a855f7" stroke-width="22.016" stroke-linecap="round"></line>
+  <circle cx="512" cy="512" r="16.512" fill="#a855f7"></circle>
+</svg>
