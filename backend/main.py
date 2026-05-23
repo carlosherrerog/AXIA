@@ -217,15 +217,17 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     return user
 
 def send_email(to_email: str, subject: str, html_body: str):
+    print(f"[Resend] API key set: {bool(resend.api_key)} | to: {to_email}")
     try:
-        resend.Emails.send({
+        result = resend.Emails.send({
             "from": "AXIA <onboarding@resend.dev>",
             "to": [to_email],
             "subject": subject,
             "html": html_body,
         })
+        print(f"[Resend] Enviado OK: {result}")
     except Exception as e:
-        print(f"Error enviando correo: {e}")
+        print(f"[Resend] Error enviando correo: {e}")
 
 def get_axia_template(titulo: str, mensaje: str, contenido_extra: str):
     """Genera un HTML con la estética profesional y futurista de AXIA (Polygon style)."""
