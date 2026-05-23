@@ -91,7 +91,7 @@ compra_venta = APIRouter(prefix="/nfts", tags=["Marketplace"])
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8081"],
+    allow_origins=["http://localhost:8081", "https://axia-sandy.vercel.app"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"], 
     allow_headers=["Authorization", "Content-Type"],
