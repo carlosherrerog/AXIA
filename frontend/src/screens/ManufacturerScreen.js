@@ -145,7 +145,7 @@ export default function ManufacturerScreen({ navigation }) {
             <TouchableOpacity
               onPress={() => {
                 if (Platform.OS === 'web') localStorage.clear();
-                navigation.getParent()?.reset({ index: 0, routes: [{ name: 'Auth' }] });
+                navigation.getParent()?.reset({ index: 0, routes: [{ name: 'Login' }] });
               }}
               style={{
                 flexDirection: 'row', alignItems: 'center', gap: 5,

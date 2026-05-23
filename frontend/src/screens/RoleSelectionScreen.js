@@ -263,7 +263,7 @@ export default function RoleSelectionScreen({ navigation, route }) {
         await SecureStore.deleteItemAsync('userData');
       }
     } catch {}
-    navigation.replace('Auth');
+    navigation.replace('Login');
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────

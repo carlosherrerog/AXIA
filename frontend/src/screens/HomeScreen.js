@@ -61,7 +61,7 @@ export default function HomeScreen() {
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
-          routes: [{ name: 'Auth' }], 
+          routes: [{ name: 'Login' }], 
         })
       );
     } catch (error) {
