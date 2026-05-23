@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
 from datetime import datetime
 from typing import Optional, List
 
@@ -19,6 +19,13 @@ class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
+
+    @field_validator('password')
+    @classmethod
+    def password_min_length(cls, v):
+        if len(v) < 8:
+            raise ValueError('La contraseña debe tener al menos 8 caracteres')
+        return v
 
 # REGISTRO [SERVIDOR]
 class UserResponse(BaseModel):
@@ -68,7 +75,14 @@ class RoleRequest(BaseModel):
 # LISTAR RELOJ EN EL MARKETPLACE [CLIENTE]
 class ListWatchRequest(BaseModel):
     price_usdc: float
-    tx_hash: str  
+    tx_hash: str
+
+    @field_validator('price_usdc')
+    @classmethod
+    def price_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError('El precio debe ser mayor que 0')
+        return v
 
 # ACTUALIZAR PRECIO DE RELOJ LISTADO [CLIENTE]
 class UpdatePriceRequest(BaseModel):

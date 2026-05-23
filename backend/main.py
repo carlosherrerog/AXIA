@@ -91,7 +91,7 @@ compra_venta = APIRouter(prefix="/nfts", tags=["Marketplace"])
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8081", "https://axia-sandy.vercel.app"],
+    allow_origins=["https://axia-sandy.vercel.app"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"], 
     allow_headers=["Authorization", "Content-Type"],
@@ -356,7 +356,8 @@ def register_user(user: user_schemas.UserCreate, db: Session = Depends(database.
     db.commit()
     db.refresh(new_user)
 
-    token = create_access_token(data={"sub": str(new_user.id), "type": "verify"})
+    verify_payload = {"sub": str(new_user.id), "type": "verify", "exp": datetime.now(timezone.utc) + timedelta(hours=24)}
+    token = jwt.encode(verify_payload, SECRET_KEY, algorithm=ALGORITHM)
     verify_link = f"{BACKEND_URL}/verify-email?token={token}"
     
     extra = f"""
@@ -388,7 +389,7 @@ def login_user(user_credentials: user_schemas.UserLogin, db: Session = Depends(d
     if not user or not verify_password(user_credentials.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     
-    if not getattr(user, 'is_verified', True):
+    if not user.is_verified:
         raise HTTPException(status_code=403, detail="Debes verificar tu correo electrónico antes de iniciar sesión.")
     
     if user.is_admin and user.roles != []:
@@ -723,7 +724,8 @@ def import_and_save_nft(token_id: int, db: Session = Depends(database.get_db), c
         raise e
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error interno: {e}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 @app.get("/nfts/my-collection")
 def get_my_collection(db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
@@ -1218,7 +1220,8 @@ async def handle_role_request(
             try:
                 blockchain.set_blockchain_role(target_user.wallet_address, requested_role, True)
             except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Error en blockchain: {str(e)}")
+                print(f"Error en blockchain al asignar rol: {e}")
+                raise HTTPException(status_code=500, detail="Error al procesar la operación en blockchain")
         
         # Actualización de Roles en la base de datos
         new_roles = list(target_user.roles)
@@ -1558,7 +1561,8 @@ async def buy_watch(watch_id: int, db: Session = Depends(database.get_db), curre
                 raise HTTPException(status_code=500, detail=tx_result.get("error", "Error en blockchain al marcar envío"))
             tx_hash = tx_result.get("tx_hash")
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error ejecutando transacción blockchain: {str(e)}")
+            print(f"Error ejecutando transacción blockchain: {e}")
+            raise HTTPException(status_code=500, detail="Error al ejecutar la transacción blockchain")
 
         # Vendedor de confianza: se marca enviado y avanza a estado 3 (Enviado)
         listing.is_shipped = True
