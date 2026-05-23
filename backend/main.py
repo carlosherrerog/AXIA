@@ -1,4 +1,4 @@
-from fastapi import APIRouter, FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Body, Form, Query, Request
+from fastapi import APIRouter, FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Body, Form, Query, Request, BackgroundTasks
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta, timezone
 from fastapi.middleware.cors import CORSMiddleware
@@ -348,7 +348,7 @@ def get_status():
 
 @app.post("/register", response_model=user_schemas.UserResponse)
 @limiter.limit("5/minute")
-def register_user(request: Request, user: user_schemas.UserCreate, db: Session = Depends(database.get_db)):
+def register_user(request: Request, background_tasks: BackgroundTasks, user: user_schemas.UserCreate, db: Session = Depends(database.get_db)):
     existing_user = db.query(models.User).filter(
         (models.User.email == user.email) | (models.User.username == user.username)
     ).first()
@@ -382,7 +382,7 @@ def register_user(request: Request, user: user_schemas.UserCreate, db: Session =
         f"Hola <strong style='color:#f8f8ff;'>{user.full_name}</strong>,<br><br>Gracias por unirte a AXIA. Haz clic en el botón de abajo para verificar tu dirección de correo y activar tu cuenta.",
         extra
     )
-    send_email(new_user.email, "AXIA · Confirma tu correo electrónico", html)
+    background_tasks.add_task(send_email, new_user.email, "AXIA · Confirma tu correo electrónico", html)
 
     return new_user
 
@@ -434,7 +434,7 @@ def verify_email(token: str, db: Session = Depends(database.get_db)):
         return "<html><body><h2>Enlace inválido o expirado.</h2></body></html>"
 
 @app.post("/forgot-password")
-def forgot_password(email: str = Body(..., embed=True), db: Session = Depends(database.get_db)):
+def forgot_password(background_tasks: BackgroundTasks, email: str = Body(..., embed=True), db: Session = Depends(database.get_db)):
     user = db.query(models.User).filter(models.User.email == email.lower().strip()).first()
     if not user:
         return {"message": "Si el correo existe, se han enviado las instrucciones."}
@@ -459,7 +459,7 @@ def forgot_password(email: str = Body(..., embed=True), db: Session = Depends(da
         extra
     )
 
-    send_email(user.email, "AXIA · Código de recuperación de contraseña", html)
+    background_tasks.add_task(send_email, user.email, "AXIA · Código de recuperación de contraseña", html)
     return {"message": "Si el correo existe, se han enviado las instrucciones."}
 
 @app.post("/reset-password")
