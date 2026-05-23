@@ -40,7 +40,6 @@ load_dotenv()
 # --- 1. CONFIGURACIÓN DE CORREO ---
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
-print(f"[STARTUP] BREVO_API_KEY cargada: {bool(BREVO_API_KEY)}")
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
