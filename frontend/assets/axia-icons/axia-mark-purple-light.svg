@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 200" width="520" height="200" fill="none">
+  <defs>
+    <mask id="wc" maskUnits="userSpaceOnUse" x="0" y="0" width="520" height="200">
+      <rect width="520" height="200" fill="white"></rect>
+      <circle cx="260" cy="100" r="66" fill="black"></circle>
+    </mask>
+  </defs>
+  
+  <g mask="url(#wc)">
+  <polygon points="152.000,100.000 130.000,138.105 86.000,138.105 64.000,100.000 86.000,61.895 130.000,61.895" fill="none" stroke="#a855f7" stroke-width="8" stroke-linejoin="round" opacity="0.45"></polygon>
+  <polygon points="198.000,100.000 176.000,138.105 132.000,138.105 110.000,100.000 132.000,61.895 176.000,61.895" fill="none" stroke="#a855f7" stroke-width="8" stroke-linejoin="round" opacity="0.75"></polygon>
+  <polygon points="244.000,100.000 222.000,138.105 178.000,138.105 156.000,100.000 178.000,61.895 222.000,61.895" fill="none" stroke="#a855f7" stroke-width="8" stroke-linejoin="round" opacity="1"></polygon>
+  <polygon points="364.000,100.000 342.000,138.105 298.000,138.105 276.000,100.000 298.000,61.895 342.000,61.895" fill="none" stroke="#a855f7" stroke-width="8" stroke-linejoin="round" opacity="1"></polygon>
+  <polygon points="410.000,100.000 388.000,138.105 344.000,138.105 322.000,100.000 344.000,61.895 388.000,61.895" fill="none" stroke="#a855f7" stroke-width="8" stroke-linejoin="round" opacity="0.75"></polygon>
+  <polygon points="456.000,100.000 434.000,138.105 390.000,138.105 368.000,100.000 390.000,61.895 434.000,61.895" fill="none" stroke="#a855f7" stroke-width="8" stroke-linejoin="round" opacity="0.45"></polygon>
+  </g>
+  <circle cx="260" cy="100" r="58" fill="none"></circle>
+  <circle cx="260" cy="100" r="58" stroke="#f8f8ff" stroke-width="5" fill="none"></circle>
+  <line x1="260" y1="100" x2="260" y2="68.100" stroke="#f8f8ff" stroke-width="4.5" stroke-linecap="round"></line>
+  <line x1="260" y1="100" x2="284.882" y2="100" stroke="#f8f8ff" stroke-width="4.5" stroke-linecap="round"></line>
+  <circle cx="260" cy="100" r="3.375" fill="#f8f8ff"></circle>
+</svg>

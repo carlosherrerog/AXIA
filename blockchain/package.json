@@ -1,0 +1,20 @@
+{
+  "name": "tfg-relojes",
+  "version": "1.0.0",
+  "description": "Proyecto de NFC y Smart Contracts en relojes",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Carlos Herrero",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
+    "dotenv": "^17.4.2",
+    "hardhat": "^2.28.6",
+    "hardhat-gas-reporter": "^2.3.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.6.1"
+  }
+}
