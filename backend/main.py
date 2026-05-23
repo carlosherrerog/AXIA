@@ -23,9 +23,7 @@ from schemas import user as user_schemas
 import blockchain
 from pydantic import BaseModel
 
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import resend
 from fastapi.responses import HTMLResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -39,8 +37,7 @@ from sqlalchemy import cast, String
 load_dotenv()
 
 # --- 1. CONFIGURACIÓN DE CORREO ---
-GMAIL_USER = os.getenv("GMAIL_USER")
-GMAIL_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
+resend.api_key = os.getenv("RESEND_API_KEY")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -220,18 +217,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     return user
 
 def send_email(to_email: str, subject: str, html_body: str):
-    msg = MIMEMultipart()
-    msg['From'] = GMAIL_USER
-    msg['To'] = to_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(html_body, 'html'))
-
     try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(GMAIL_USER, GMAIL_PASSWORD)
-        server.send_message(msg)
-        server.quit()
+        resend.Emails.send({
+            "from": "AXIA <onboarding@resend.dev>",
+            "to": [to_email],
+            "subject": subject,
+            "html": html_body,
+        })
     except Exception as e:
         print(f"Error enviando correo: {e}")
 
