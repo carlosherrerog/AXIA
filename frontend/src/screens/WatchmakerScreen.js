@@ -109,7 +109,7 @@ export default function WatchmakerScreen({ navigation }) {
         await SecureStore.deleteItemAsync('userData');
       }
     } catch {}
-    navigation.replace('Auth');
+    navigation.replace('Login');
   };
 
   const handleWalletChange = async (updatedUser) => {

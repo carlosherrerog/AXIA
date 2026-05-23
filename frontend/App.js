@@ -125,7 +125,7 @@ function DesktopSidebar({ hovered, setHovered, activeTab, onTabPress }) {
       onPress: () => {
         setShowMoreMenu(false);
         if (Platform.OS === 'web') localStorage.clear();
-        navigationRef.reset({ index: 0, routes: [{ name: 'Auth' }] });
+        navigationRef.reset({ index: 0, routes: [{ name: 'Login' }] });
       },
     },
   ];
@@ -313,7 +313,7 @@ const linking = {
   prefixes: ['http://localhost:8081', 'axia://'],
   config: {
     screens: {
-      Auth: '',
+      Login: '',
       RoleSelection: 'onboarding',
       Admin: 'admin',
       WatchmakerDashboard: {
@@ -350,7 +350,7 @@ const linking = {
 function AppNavigator() {
   return (
     <NavigationContainer ref={navigationRef} linking={linking}>
-      <Stack.Navigator initialRouteName="Auth" screenOptions={{ headerShown: false }}>
+      <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login"           component={AuthScreen} />
         <Stack.Screen name="RoleSelection"  component={RoleSelectionScreen} />
         <Stack.Screen name="Admin"          component={AdminScreen} />

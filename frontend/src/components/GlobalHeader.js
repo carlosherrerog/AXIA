@@ -147,7 +147,7 @@ export default function GlobalHeader({
   const handleLogout = () => {
     setMoreMenuVisible(false);
     if (Platform.OS === 'web') localStorage.clear();
-    navigation?.reset({ index: 0, routes: [{ name: 'Auth' }] });
+    navigation?.reset({ index: 0, routes: [{ name: 'Login' }] });
   };
 
   const moreMenuItems = [

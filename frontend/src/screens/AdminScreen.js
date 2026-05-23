@@ -435,7 +435,7 @@ export default function AdminScreen({ route, navigation }) {
         await SecureStore.deleteItemAsync('userData');
       }
     } catch {}
-    navigation.replace('Auth');
+    navigation.replace('Login');
   };
 
   // Derivados
