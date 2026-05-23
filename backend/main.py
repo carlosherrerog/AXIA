@@ -23,7 +23,7 @@ from schemas import user as user_schemas
 import blockchain
 from pydantic import BaseModel
 
-import httpx
+from mailersend import emails as mailersend_emails
 from fastapi.responses import HTMLResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -37,7 +37,8 @@ from sqlalchemy import cast, String
 load_dotenv()
 
 # --- 1. CONFIGURACIÓN DE CORREO ---
-BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+MAILERSEND_API_KEY = os.getenv("MAILERSEND_API_KEY")
+MAILERSEND_FROM  = os.getenv("MAILERSEND_FROM")   # noreply@trial-xxxx.mlsender.net
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -218,18 +219,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 def send_email(to_email: str, subject: str, html_body: str):
     try:
-        response = httpx.post(
-            "https://api.brevo.com/v3/smtp/email",
-            headers={"api-key": BREVO_API_KEY, "Content-Type": "application/json"},
-            json={
-                "sender": {"name": "AXIA", "email": "axiawatches@gmail.com"},
-                "to": [{"email": to_email}],
-                "subject": subject,
-                "htmlContent": html_body,
-            },
-            timeout=10,
-        )
-        response.raise_for_status()
+        mailer = mailersend_emails.NewEmail(MAILERSEND_API_KEY)
+        mail_body = {}
+        mailer.set_mail_from({"name": "AXIA", "email": MAILERSEND_FROM}, mail_body)
+        mailer.set_mail_to([{"email": to_email}], mail_body)
+        mailer.set_subject(subject, mail_body)
+        mailer.set_html_content(html_body, mail_body)
+        mailer.send(mail_body)
     except Exception as e:
         print(f"Error enviando correo: {e}")
 
