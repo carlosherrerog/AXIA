@@ -813,7 +813,7 @@ const CONTRACTS = [
     label: 'WatchNFT',
     icon: 'disc-outline',
     color: '#8b5cf6',
-    address: process.env.EXPO_PUBLIC_WATCH_NFT_ADDRESS,
+    address: process.env.EXPO_PUBLIC_WATCH_NFT_ADDRESS || '0x8725a60F432EDCaA3dF1d7987e99B9C18c465988',
     desc: 'ERC-721 · Autenticación de relojes',
   },
   {
@@ -821,7 +821,7 @@ const CONTRACTS = [
     label: 'Marketplace',
     icon: 'storefront-outline',
     color: '#3b82f6',
-    address: process.env.EXPO_PUBLIC_MARKETPLACE_ADDRESS,
+    address: process.env.EXPO_PUBLIC_MARKETPLACE_ADDRESS || '0x57057749e6aF1b21070FA2A4e5D4359AA2711735',
     desc: 'Escrow · Compraventa y liquidaciones',
   },
   {
@@ -829,7 +829,7 @@ const CONTRACTS = [
     label: 'WatchAuction',
     icon: 'hammer-outline',
     color: '#f59e0b',
-    address: process.env.EXPO_PUBLIC_AUCTION_ADDRESS,
+    address: process.env.EXPO_PUBLIC_AUCTION_ADDRESS || '0xe7Be5Fd0162f7f2fbC5851FB9DC2f5b4b81F63d6',
     desc: 'Subastas con puja mínima',
   },
   {
@@ -837,7 +837,7 @@ const CONTRACTS = [
     label: 'Signature',
     icon: 'shield-checkmark-outline',
     color: '#10b981',
-    address: process.env.EXPO_PUBLIC_SIGNATURE_VERIFIER_ADDRESS,
+    address: process.env.EXPO_PUBLIC_SIGNATURE_VERIFIER_ADDRESS || '0x967187957d31d0912aE57cad1B51F764339AaEe6',
     desc: 'Verificación de seguridad NFC',
   },
   {
@@ -845,12 +845,12 @@ const CONTRACTS = [
     label: 'MockUSDC',
     icon: 'cash-outline',
     color: '#22c55e',
-    address: process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS,
+    address: process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS || '0xbBfCa1b8404Dc43238C4A359E8454632f00c292F',
     desc: 'Stablecoin de pagos (USDC)',
   },
 ];
 
-function ContractsPanel({ colors, stats, users }) {
+function ContractsPanel({ colors }) {
   const [copiedKey, setCopiedKey] = useState(null);
 
   const handleCopy = async (key, address) => {
@@ -859,14 +859,6 @@ function ContractsPanel({ colors, stats, users }) {
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 1500);
   };
-
-
-  const statItems = [
-    { icon: 'people-outline',           label: 'Usuarios',   value: stats?.total      ?? users.length, color: colors.primary },
-    { icon: 'storefront-outline',        label: 'Dealers',    value: stats?.dealers    ?? 0,            color: roleColors.DEALER },
-    { icon: 'build-outline',             label: 'Relojeros',  value: stats?.relojeros  ?? 0,            color: roleColors.RELOJERO },
-    { icon: 'business-outline',          label: 'Fabricantes',value: stats?.fabricantes ?? 0,           color: roleColors.FABRICANTE },
-  ];
 
   return (
     <View style={{
@@ -892,28 +884,9 @@ function ContractsPanel({ colors, stats, users }) {
           </View>
         </View>
 
-        {/* Estadísticas rápidas */}
-        <View style={{
-          flexDirection: 'row', gap: 8, marginBottom: 16,
-          flexWrap: 'wrap',
-        }}>
-          {statItems.map(s => (
-            <View key={s.label} style={{
-              flex: 1, minWidth: 70,
-              backgroundColor: s.color + '12',
-              borderRadius: 10, borderWidth: 1, borderColor: s.color + '30',
-              padding: 10, alignItems: 'center',
-            }}>
-              <Ionicons name={s.icon} size={14} color={s.color} style={{ marginBottom: 4 }} />
-              <Text style={{ color: s.color, fontWeight: '800', fontSize: 16 }}>{s.value}</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 10, marginTop: 1 }}>{s.label}</Text>
-            </View>
-          ))}
-        </View>
-
         {/* Tarjetas de contratos — mismo diseño que InfoScreen */}
         <View style={{ gap: 10 }}>
-          {CONTRACTS.filter(c => c.address).map(c => {
+          {CONTRACTS.map(c => {
             const isCopied = copiedKey === c.key;
             return (
               <View key={c.key} style={{
@@ -1418,7 +1391,7 @@ export default function AdminScreen({ route, navigation }) {
         <View style={{ flex: 1, minWidth: 0 }}>
 
           {/* ── Contratos desplegados ── */}
-          <ContractsPanel colors={colors} stats={stats} users={users} />
+          <ContractsPanel colors={colors} />
 
           {/* Tabs */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
