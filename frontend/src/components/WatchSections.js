@@ -217,7 +217,7 @@ export default function WatchSections({
 
 const FILTER_CHIPS = [
   { key: 'all',     label: 'Todos',          icon: 'apps-outline' },
-  { key: 'sale',    label: 'Venta directa',  icon: 'pricetag-outline' },
+  { key: 'sale',    label: 'En venta',        icon: 'pricetag-outline' },
   { key: 'auction', label: 'Subastas',       icon: 'trending-up-outline' },
 ];
 
@@ -408,7 +408,7 @@ export function MarketplaceWatchSection({ watches, navigation }) {
           </View>
         )}
         ListEmptyComponent={
-          hasActiveFilters ? (
+          hasActiveFilters && watches.length > 0 ? (
             /* Estado vacío — sin resultados para los filtros activos */
             <View style={{ alignItems: 'center', paddingVertical: 60, paddingHorizontal: 20 }}>
               <View style={{
