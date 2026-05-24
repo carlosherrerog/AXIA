@@ -490,7 +490,12 @@ def get_logistics_status() -> dict:
         address = account.address
         balance_wei = w3.eth.get_balance(address)
         balance_eth = float(w3.from_wei(balance_wei, "ether"))
-        return {"configured": True, "address": address, "balance_eth": balance_eth}
+        auction_address = None
+        try:
+            auction_address = marketplace_contract.functions.auctionContract().call()
+        except Exception:
+            pass
+        return {"configured": True, "address": address, "balance_eth": balance_eth, "auction_address": auction_address}
     except Exception as e:
         return {"configured": False, "address": None, "balance_eth": None, "error": str(e)}
 

@@ -1479,6 +1479,51 @@ async def update_fee_recipient(body: FeeRecipientRequest, current_user: models.U
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error actualizando destinatario: {e}")
 
+class AddressRequest(BaseModel):
+    address: str
+
+@app.post("/admin/set-logistics-system")
+async def set_logistics_system(body: AddressRequest, current_user: models.User = Depends(get_current_user)):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Acceso denegado.")
+    try:
+        checksum = blockchain.w3.to_checksum_address(body.address)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Dirección de wallet inválida.")
+    try:
+        tx = blockchain.marketplace_contract.functions.setLogisticsSystem(checksum).build_transaction({
+            "from": blockchain.ADMIN_ADDRESS,
+            "nonce": blockchain.w3.eth.get_transaction_count(blockchain.ADMIN_ADDRESS),
+            "gas": 100000,
+            "gasPrice": blockchain.w3.eth.gas_price,
+        })
+        signed = blockchain.w3.eth.account.sign_transaction(tx, private_key=blockchain.ADMIN_PRIVATE_KEY)
+        blockchain.w3.eth.send_raw_transaction(signed.raw_transaction)
+        return {"ok": True, "address": checksum}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error actualizando sistema logístico: {e}")
+
+@app.post("/admin/set-auction-contract")
+async def set_auction_contract(body: AddressRequest, current_user: models.User = Depends(get_current_user)):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Acceso denegado.")
+    try:
+        checksum = blockchain.w3.to_checksum_address(body.address)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Dirección de contrato inválida.")
+    try:
+        tx = blockchain.marketplace_contract.functions.setAuctionContract(checksum).build_transaction({
+            "from": blockchain.ADMIN_ADDRESS,
+            "nonce": blockchain.w3.eth.get_transaction_count(blockchain.ADMIN_ADDRESS),
+            "gas": 100000,
+            "gasPrice": blockchain.w3.eth.gas_price,
+        })
+        signed = blockchain.w3.eth.account.sign_transaction(tx, private_key=blockchain.ADMIN_PRIVATE_KEY)
+        blockchain.w3.eth.send_raw_transaction(signed.raw_transaction)
+        return {"ok": True, "address": checksum}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error actualizando contrato de subastas: {e}")
+
 # ===============================================================================
 #  COMPRA VENTA VISUALIZACIÓN
 # ===============================================================================

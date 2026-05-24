@@ -137,9 +137,113 @@ function StatCard({ icon, value, label, color, colors }) {
 }
 
 // ─── Marketplace Control ──────────────────────────────────────────────────────
-function MarketplaceCard({ paused, loading, onToggle, logisticsStatus, copiedLogistics, onCopyLogistics, colors }) {
+function MarketplaceCard({ paused, loading, onToggle, logisticsStatus, copiedLogistics, onCopyLogistics, colors, onRefresh }) {
   const active = !paused;
   const statusColor = active ? '#10b981' : '#f43f5e';
+
+  const [editLogistics,   setEditLogistics]   = useState(false);
+  const [editAuction,     setEditAuction]     = useState(false);
+  const [logisticsDraft,  setLogisticsDraft]  = useState('');
+  const [auctionDraft,    setAuctionDraft]    = useState('');
+  const [savingL,         setSavingL]         = useState(false);
+  const [savingA,         setSavingA]         = useState(false);
+  const [alertL,          setAlertL]          = useState(null);
+  const [alertA,          setAlertA]          = useState(null);
+
+  const handleSaveLogistics = async () => {
+    setSavingL(true);
+    try {
+      await api.post('/admin/set-logistics-system', { address: logisticsDraft });
+      setEditLogistics(false);
+      setAlertL({ type: 'success', msg: 'Sistema logístico actualizado.' });
+      onRefresh?.();
+    } catch (e) {
+      setAlertL({ type: 'error', msg: e.response?.data?.detail || 'Error al guardar.' });
+    } finally { setSavingL(false); }
+  };
+
+  const handleSaveAuction = async () => {
+    setSavingA(true);
+    try {
+      await api.post('/admin/set-auction-contract', { address: auctionDraft });
+      setEditAuction(false);
+      setAlertA({ type: 'success', msg: 'Contrato de subastas actualizado.' });
+    } catch (e) {
+      setAlertA({ type: 'error', msg: e.response?.data?.detail || 'Error al guardar.' });
+    } finally { setSavingA(false); }
+  };
+
+  const AddressRow = ({ label, icon, value, editing, draft, onChangeDraft, onEdit, onSave, onCancel, saving, alert, onDismiss }) => (
+    <View style={{ paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 6 }}>
+        <Ionicons name={icon} size={12} color={colors.textSecondary} />
+        <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '600', flex: 1 }}>{label}</Text>
+        {editing ? (
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            <TouchableOpacity onPress={onCancel}>
+              <Text style={{ color: colors.textMuted, fontSize: 11 }}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onSave} disabled={saving}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 3,
+                backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 6,
+                paddingHorizontal: 8, paddingVertical: 3,
+                borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
+              {saving ? <ActivityIndicator size="small" color="#10b981" />
+                : <Ionicons name="checkmark" size={11} color="#10b981" />}
+              <Text style={{ color: '#10b981', fontSize: 11, fontWeight: '700' }}>Guardar</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={() => { onEdit(); onChangeDraft(value || ''); }}>
+            <Ionicons name="pencil-outline" size={12} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {editing ? (
+        <View style={{
+          borderWidth: 1, borderColor: 'rgba(130,71,229,0.3)', borderRadius: 8,
+          paddingHorizontal: 9, paddingVertical: 6, backgroundColor: 'rgba(130,71,229,0.05)',
+        }}>
+          <TextInputNative
+            value={draft} onChangeText={onChangeDraft}
+            placeholder="0x..." placeholderTextColor={colors.textMuted}
+            style={{ color: colors.text, fontSize: 10,
+              fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+              ...(Platform.OS === 'web' && { outlineStyle: 'none' }) }}
+          />
+        </View>
+      ) : (
+        <Text numberOfLines={1} style={{
+          color: colors.textMuted, fontSize: 10,
+          fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+        }}>{value || 'No configurada'}</Text>
+      )}
+
+      {alert && (
+        <View style={{
+          flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6,
+          backgroundColor: alert.type === 'success' ? 'rgba(16,185,129,0.08)' : 'rgba(244,63,94,0.08)',
+          borderRadius: 7, paddingHorizontal: 8, paddingVertical: 6,
+          borderWidth: 1, borderColor: alert.type === 'success' ? 'rgba(16,185,129,0.25)' : 'rgba(244,63,94,0.25)',
+        }}>
+          <Ionicons name={alert.type === 'success' ? 'checkmark-circle-outline' : 'alert-circle-outline'}
+            size={12} color={alert.type === 'success' ? '#10b981' : '#f43f5e'} />
+          <Text style={{ flex: 1, fontSize: 11, color: alert.type === 'success' ? '#10b981' : '#f43f5e' }}>{alert.msg}</Text>
+          <TouchableOpacity onPress={onDismiss}><Ionicons name="close" size={11} color={colors.textMuted} /></TouchableOpacity>
+        </View>
+      )}
+
+      {!editing && label === 'Sistema Logístico' && logisticsStatus?.balance_eth === 0 && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6,
+          backgroundColor: 'rgba(244,63,94,0.07)', borderRadius: 7, padding: 7, marginTop: 6,
+          borderWidth: 1, borderColor: 'rgba(244,63,94,0.18)' }}>
+          <Ionicons name="warning-outline" size={11} color="#f43f5e" />
+          <Text style={{ color: '#f43f5e', fontSize: 11 }}>Sin fondos — las transacciones pueden fallar</Text>
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <View style={{
@@ -170,21 +274,18 @@ function MarketplaceCard({ paused, loading, onToggle, logisticsStatus, copiedLog
           </View>
         </View>
         <TouchableOpacity
-          onPress={onToggle}
-          disabled={loading}
+          onPress={onToggle} disabled={loading}
           style={{
             flexDirection: 'row', alignItems: 'center', gap: 6,
             paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
             backgroundColor: active ? 'rgba(244,63,94,0.1)' : 'rgba(16,185,129,0.1)',
-            borderWidth: 1,
-            borderColor: active ? 'rgba(244,63,94,0.3)' : 'rgba(16,185,129,0.3)',
+            borderWidth: 1, borderColor: active ? 'rgba(244,63,94,0.3)' : 'rgba(16,185,129,0.3)',
           }}
         >
           {loading
             ? <ActivityIndicator size="small" color={active ? '#f43f5e' : '#10b981'} />
             : <>
-                <Ionicons name={active ? 'pause' : 'play'} size={13}
-                  color={active ? '#f43f5e' : '#10b981'} />
+                <Ionicons name={active ? 'pause' : 'play'} size={13} color={active ? '#f43f5e' : '#10b981'} />
                 <Text style={{ color: active ? '#f43f5e' : '#10b981', fontWeight: '700', fontSize: 12 }}>
                   {active ? 'Pausar' : 'Reanudar'}
                 </Text>
@@ -194,57 +295,28 @@ function MarketplaceCard({ paused, loading, onToggle, logisticsStatus, copiedLog
       </View>
 
       {/* Sistema logístico */}
-      {logisticsStatus && (
-        <View style={{ padding: 14 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
-            <Ionicons name="send-outline" size={13} color={colors.textSecondary} />
-            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '600', flex: 1 }}>
-              Sistema Logístico
-            </Text>
-            {logisticsStatus.balance_eth != null && (
-              <Text style={{
-                fontSize: 12, fontWeight: '700',
-                color: logisticsStatus.balance_eth === 0 ? '#f43f5e'
-                  : logisticsStatus.balance_eth < 0.01 ? '#f59e0b' : '#10b981',
-              }}>
-                {logisticsStatus.balance_eth.toFixed(4)} POL
-              </Text>
-            )}
-          </View>
-          <TouchableOpacity
-            disabled={!logisticsStatus.address}
-            onPress={onCopyLogistics}
-            style={{
-              flexDirection: 'row', alignItems: 'center', gap: 8,
-              backgroundColor: colors.background, borderRadius: 8,
-              paddingHorizontal: 10, paddingVertical: 8,
-              borderWidth: 1, borderColor: colors.border,
-            }}
-          >
-            <Text numberOfLines={1} style={{
-              flex: 1, color: colors.textMuted, fontSize: 10,
-              fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-            }}>
-              {logisticsStatus.address || 'No configurada'}
-            </Text>
-            {logisticsStatus.address && (
-              <Ionicons name={copiedLogistics ? 'checkmark' : 'copy-outline'}
-                size={12} color={copiedLogistics ? '#10b981' : colors.textMuted} />
-            )}
-          </TouchableOpacity>
-          {logisticsStatus.balance_eth === 0 && (
-            <View style={{
-              flexDirection: 'row', alignItems: 'center', gap: 6,
-              backgroundColor: 'rgba(244,63,94,0.07)', borderRadius: 8,
-              padding: 8, marginTop: 8,
-              borderWidth: 1, borderColor: 'rgba(244,63,94,0.18)',
-            }}>
-              <Ionicons name="warning-outline" size={12} color="#f43f5e" />
-              <Text style={{ color: '#f43f5e', fontSize: 11 }}>Sin fondos — las transacciones pueden fallar</Text>
-            </View>
-          )}
-        </View>
-      )}
+      <AddressRow
+        label="Sistema Logístico" icon="send-outline"
+        value={logisticsStatus?.address}
+        editing={editLogistics} draft={logisticsDraft}
+        onChangeDraft={setLogisticsDraft}
+        onEdit={() => setEditLogistics(true)}
+        onSave={handleSaveLogistics}
+        onCancel={() => setEditLogistics(false)}
+        saving={savingL} alert={alertL} onDismiss={() => setAlertL(null)}
+      />
+
+      {/* Contrato de subastas */}
+      <AddressRow
+        label="Contrato Subastas" icon="hammer-outline"
+        value={logisticsStatus?.auction_address}
+        editing={editAuction} draft={auctionDraft}
+        onChangeDraft={setAuctionDraft}
+        onEdit={() => setEditAuction(true)}
+        onSave={handleSaveAuction}
+        onCancel={() => setEditAuction(false)}
+        saving={savingA} alert={alertA} onDismiss={() => setAlertA(null)}
+      />
     </View>
   );
 }
@@ -1125,6 +1197,7 @@ export default function AdminScreen({ route, navigation }) {
             setTimeout(() => setCopiedLogistics(false), 2000);
           }}
           colors={colors}
+          onRefresh={() => fetchAll(false)}
         />
       )}
 
