@@ -285,6 +285,16 @@ function FeesCard({ colors }) {
   useEffect(() => { fetchFees(); }, []);
 
   const handleSaveFees = async () => {
+    const vals = { platform: parseFloat(draft.platform), royalty: parseFloat(draft.royalty), watchmaker: parseFloat(draft.watchmaker), deposit: parseFloat(draft.deposit) };
+    if (Object.values(vals).some(v => isNaN(v) || v < 0)) {
+      setAlert({ type: 'error', msg: 'Los valores deben ser números positivos.' }); return;
+    }
+    if (vals.platform > 10 || vals.royalty > 10) {
+      setAlert({ type: 'error', msg: 'Plataforma y regalía: máximo 10%.' }); return;
+    }
+    if (vals.watchmaker > 5 || vals.deposit > 5) {
+      setAlert({ type: 'error', msg: 'Relojero y depósito: máximo 5%.' }); return;
+    }
     setSaving(true);
     try {
       await api.post('/admin/fees', {
@@ -387,32 +397,55 @@ function FeesCard({ colors }) {
               <Text style={{ flex: 1, color: colors.textSecondary, fontSize: 12 }}>
                 {row.label}
               </Text>
-              {editing ? (
-                <View style={{
-                  flexDirection: 'row', alignItems: 'center',
-                  borderWidth: 1, borderColor: `${row.color}40`,
-                  borderRadius: 6, backgroundColor: `${row.color}08`,
-                  paddingHorizontal: 7, paddingVertical: 3,
-                }}>
-                  <TextInputNative
-                    value={String(draft[row.key] ?? '')}
-                    onChangeText={v => setDraft(d => ({ ...d, [row.key]: v }))}
-                    keyboardType="decimal-pad"
-                    selectTextOnFocus
-                    style={{
-                      color: row.color, fontWeight: '700', fontSize: 13,
-                      width: 38, textAlign: 'right',
-                      ...(Platform.OS === 'web' && { outlineStyle: 'none' }),
-                    }}
-                  />
-                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>%</Text>
-                </View>
-              ) : (
+              {editing ? (() => {
+                const val = parseFloat(draft[row.key]);
+                const isOver = !isNaN(val) && val > row.max;
+                const isNeg  = !isNaN(val) && val < 0;
+                const hasErr = isOver || isNeg;
+                return (
+                  <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                    <View style={{
+                      flexDirection: 'row', alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: hasErr ? '#f43f5e' : `${row.color}40`,
+                      borderRadius: 6,
+                      backgroundColor: hasErr ? 'rgba(244,63,94,0.06)' : `${row.color}08`,
+                      paddingHorizontal: 7, paddingVertical: 3,
+                    }}>
+                      <TextInputNative
+                        value={String(draft[row.key] ?? '')}
+                        onChangeText={v => {
+                          // solo dígitos y un punto decimal, sin negativos
+                          const clean = v.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                          setDraft(d => ({ ...d, [row.key]: clean }));
+                        }}
+                        keyboardType="decimal-pad"
+                        selectTextOnFocus
+                        style={{
+                          color: hasErr ? '#f43f5e' : row.color,
+                          fontWeight: '700', fontSize: 13,
+                          width: 38, textAlign: 'right',
+                          ...(Platform.OS === 'web' && { outlineStyle: 'none' }),
+                        }}
+                      />
+                      <Text style={{ color: colors.textMuted, fontSize: 12 }}>%</Text>
+                    </View>
+                    {hasErr && (
+                      <Text style={{ color: '#f43f5e', fontSize: 9 }}>
+                        {isNeg ? 'Mín. 0%' : `Máx. ${row.max}%`}
+                      </Text>
+                    )}
+                  </View>
+                );
+              })() : (
                 <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 1 }}>
                   <Text style={{ color: row.color, fontWeight: '800', fontSize: 15 }}>
                     {fees ? toPct(fees[row.key]) : '—'}
                   </Text>
                   <Text style={{ color: colors.textMuted, fontSize: 10 }}>%</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 9, marginLeft: 3 }}>
+                    / {row.max}%
+                  </Text>
                 </View>
               )}
             </View>
