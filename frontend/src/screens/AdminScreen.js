@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, ActivityIndicator,
   Platform, Modal, RefreshControl, Pressable, Image, useWindowDimensions,
@@ -11,81 +11,147 @@ import { useFocusEffect } from '@react-navigation/native';
 import api, { WS_URL } from '../api/api.js';
 import { roleColors, alertColors } from '../themes/styles.js';
 import { useTheme } from '../context/ThemeContext';
-import UserInfo from '../components/UserInfo';
 
 const ROLE_META = {
-  RELOJERO:   { icon: 'build',      label: 'Relojeros',   color: roleColors.RELOJERO  },
-  DEALER:     { icon: 'storefront', label: 'Dealers',     color: roleColors.DEALER    },
+  RELOJERO:   { icon: 'build',      label: 'Relojeros',   color: roleColors.RELOJERO   },
+  DEALER:     { icon: 'storefront', label: 'Dealers',     color: roleColors.DEALER     },
   FABRICANTE: { icon: 'business',   label: 'Fabricantes', color: roleColors.FABRICANTE },
 };
 
-// ─── Stat Card ───────────────────────────────────────────────────────────────
-function StatCard({ icon, value, label, color, colors, wide }) {
+// ─── Admin Header ─────────────────────────────────────────────────────────────
+function AdminHeader({ user, marketPaused, onLogout, colors }) {
+  const initial = (user?.username?.[0] || 'A').toUpperCase();
+
   return (
     <View style={{
-      flex: wide ? 0 : 1,
-      width: wide ? '100%' : undefined,
-      minWidth: 80,
       backgroundColor: colors.backgroundAlt,
-      borderRadius: 14, padding: 14,
-      borderWidth: 1, borderColor: `${color}28`,
-      ...(Platform.OS === 'web' && { boxShadow: `0 2px 12px ${color}10` }),
+      borderBottomWidth: 1, borderBottomColor: colors.border,
+      paddingTop: Platform.OS === 'ios' ? 52 : 16,
+      paddingBottom: 14,
+      paddingHorizontal: 20,
+      flexDirection: 'row', alignItems: 'center', gap: 14,
+      ...(Platform.OS === 'web' && { boxShadow: '0 1px 0 rgba(255,255,255,0.04)' }),
     }}>
-      <View style={{
-        width: 34, height: 34, borderRadius: 10,
-        backgroundColor: `${color}16`,
-        justifyContent: 'center', alignItems: 'center', marginBottom: 10,
-      }}>
-        <Ionicons name={icon} size={17} color={color} />
+      {/* Logo */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        {Platform.OS === 'web'
+          ? <Image source={require('../../assets/axia-icons/axia-icon-rounded-purple.svg')}
+              style={{ width: 28, height: 28 }} resizeMode="contain" />
+          : <Ionicons name="diamond" size={22} color="#8247e5" />
+        }
+        <View style={{
+          backgroundColor: 'rgba(168,85,247,0.12)', borderRadius: 6,
+          paddingHorizontal: 8, paddingVertical: 3,
+          borderWidth: 1, borderColor: 'rgba(168,85,247,0.25)',
+        }}>
+          <Text style={{ color: '#a855f7', fontSize: 10, fontWeight: '800', letterSpacing: 1.5 }}>
+            ADMIN
+          </Text>
+        </View>
+        {marketPaused && (
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 4,
+            backgroundColor: 'rgba(244,63,94,0.1)', borderRadius: 6,
+            paddingHorizontal: 8, paddingVertical: 3,
+            borderWidth: 1, borderColor: 'rgba(244,63,94,0.3)',
+          }}>
+            <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#f43f5e' }} />
+            <Text style={{ color: '#f43f5e', fontSize: 10, fontWeight: '700', letterSpacing: 0.8 }}>
+              PAUSADO
+            </Text>
+          </View>
+        )}
       </View>
-      <Text style={{ color, fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>{value}</Text>
-      <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>{label}</Text>
+
+      <View style={{ flex: 1 }} />
+
+      {/* Usuario */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>
+            {user?.full_name || user?.username}
+          </Text>
+          <Text style={{ color: colors.textMuted, fontSize: 11 }}>{user?.email}</Text>
+        </View>
+        <View style={{
+          width: 36, height: 36, borderRadius: 18,
+          backgroundColor: 'rgba(168,85,247,0.15)',
+          borderWidth: 2, borderColor: 'rgba(168,85,247,0.4)',
+          justifyContent: 'center', alignItems: 'center',
+        }}>
+          <Text style={{ color: '#a855f7', fontWeight: '800', fontSize: 15 }}>{initial}</Text>
+        </View>
+        <TouchableOpacity
+          onPress={onLogout}
+          style={{
+            width: 36, height: 36, borderRadius: 10,
+            backgroundColor: 'rgba(244,63,94,0.08)',
+            borderWidth: 1, borderColor: 'rgba(244,63,94,0.2)',
+            justifyContent: 'center', alignItems: 'center',
+          }}
+        >
+          <Ionicons name="log-out-outline" size={17} color="#f43f5e" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
-// ─── Marketplace Status Card ─────────────────────────────────────────────────
-function MarketplaceStatusCard({ paused, loading, onToggle, colors }) {
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+function StatCard({ icon, value, label, color, colors }) {
+  return (
+    <View style={{
+      flex: 1, alignItems: 'center',
+      backgroundColor: colors.backgroundAlt,
+      borderRadius: 14, paddingVertical: 14, paddingHorizontal: 8,
+      borderWidth: 1, borderColor: `${color}22`,
+    }}>
+      <Ionicons name={icon} size={18} color={color} style={{ marginBottom: 6 }} />
+      <Text style={{ color, fontSize: 22, fontWeight: '800', letterSpacing: -0.5 }}>{value}</Text>
+      <Text style={{ color: colors.textSecondary, fontSize: 10, marginTop: 2, textAlign: 'center' }}>{label}</Text>
+    </View>
+  );
+}
+
+// ─── Marketplace Control ──────────────────────────────────────────────────────
+function MarketplaceCard({ paused, loading, onToggle, logisticsStatus, copiedLogistics, onCopyLogistics, colors }) {
   const active = !paused;
-  const color  = active ? '#10b981' : '#f43f5e';
+  const statusColor = active ? '#10b981' : '#f43f5e';
 
   return (
     <View style={{
       backgroundColor: colors.backgroundAlt,
-      borderRadius: 16, borderWidth: 1.5,
-      borderColor: `${color}30`,
-      padding: 16, marginBottom: 16,
-      ...(Platform.OS === 'web' && { boxShadow: `0 4px 20px ${color}10` }),
+      borderRadius: 16, borderWidth: 1, borderColor: colors.border,
+      overflow: 'hidden', marginBottom: 12,
     }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View style={{
-            width: 44, height: 44, borderRadius: 12,
-            backgroundColor: `${color}15`,
-            justifyContent: 'center', alignItems: 'center',
-          }}>
-            <Ionicons name={active ? 'storefront' : 'pause-circle'} size={22} color={color} />
-          </View>
-          <View>
-            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>
-              Estado del Marketplace
+      {/* Estado marketplace */}
+      <View style={{
+        flexDirection: 'row', alignItems: 'center',
+        padding: 14, gap: 12,
+        borderBottomWidth: 1, borderBottomColor: colors.border,
+      }}>
+        <View style={{
+          width: 38, height: 38, borderRadius: 10,
+          backgroundColor: `${statusColor}12`,
+          justifyContent: 'center', alignItems: 'center',
+        }}>
+          <Ionicons name={active ? 'storefront' : 'pause-circle'} size={18} color={statusColor} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>Marketplace</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusColor }} />
+            <Text style={{ color: statusColor, fontSize: 11, fontWeight: '600' }}>
+              {active ? 'Operativo' : 'Pausado'}
             </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
-              <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }} />
-              <Text style={{ color, fontSize: 12, fontWeight: '600' }}>
-                {active ? 'Operativo · Aceptando transacciones' : 'Pausado · Transacciones bloqueadas'}
-              </Text>
-            </View>
           </View>
         </View>
-
         <TouchableOpacity
           onPress={onToggle}
           disabled={loading}
           style={{
-            flexDirection: 'row', alignItems: 'center', gap: 7,
-            paddingHorizontal: 16, paddingVertical: 10,
-            borderRadius: 12,
+            flexDirection: 'row', alignItems: 'center', gap: 6,
+            paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
             backgroundColor: active ? 'rgba(244,63,94,0.1)' : 'rgba(16,185,129,0.1)',
             borderWidth: 1,
             borderColor: active ? 'rgba(244,63,94,0.3)' : 'rgba(16,185,129,0.3)',
@@ -94,21 +160,68 @@ function MarketplaceStatusCard({ paused, loading, onToggle, colors }) {
           {loading
             ? <ActivityIndicator size="small" color={active ? '#f43f5e' : '#10b981'} />
             : <>
-                <Ionicons
-                  name={active ? 'pause-circle-outline' : 'play-circle-outline'}
-                  size={16}
-                  color={active ? '#f43f5e' : '#10b981'}
-                />
-                <Text style={{
-                  color: active ? '#f43f5e' : '#10b981',
-                  fontWeight: '700', fontSize: 13,
-                }}>
+                <Ionicons name={active ? 'pause' : 'play'} size={13}
+                  color={active ? '#f43f5e' : '#10b981'} />
+                <Text style={{ color: active ? '#f43f5e' : '#10b981', fontWeight: '700', fontSize: 12 }}>
                   {active ? 'Pausar' : 'Reanudar'}
                 </Text>
               </>
           }
         </TouchableOpacity>
       </View>
+
+      {/* Sistema logístico */}
+      {logisticsStatus && (
+        <View style={{ padding: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+            <Ionicons name="send-outline" size={13} color={colors.textSecondary} />
+            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '600', flex: 1 }}>
+              Sistema Logístico
+            </Text>
+            {logisticsStatus.balance_eth != null && (
+              <Text style={{
+                fontSize: 12, fontWeight: '700',
+                color: logisticsStatus.balance_eth === 0 ? '#f43f5e'
+                  : logisticsStatus.balance_eth < 0.01 ? '#f59e0b' : '#10b981',
+              }}>
+                {logisticsStatus.balance_eth.toFixed(4)} POL
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity
+            disabled={!logisticsStatus.address}
+            onPress={onCopyLogistics}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 8,
+              backgroundColor: colors.background, borderRadius: 8,
+              paddingHorizontal: 10, paddingVertical: 8,
+              borderWidth: 1, borderColor: colors.border,
+            }}
+          >
+            <Text numberOfLines={1} style={{
+              flex: 1, color: colors.textMuted, fontSize: 10,
+              fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+            }}>
+              {logisticsStatus.address || 'No configurada'}
+            </Text>
+            {logisticsStatus.address && (
+              <Ionicons name={copiedLogistics ? 'checkmark' : 'copy-outline'}
+                size={12} color={copiedLogistics ? '#10b981' : colors.textMuted} />
+            )}
+          </TouchableOpacity>
+          {logisticsStatus.balance_eth === 0 && (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 6,
+              backgroundColor: 'rgba(244,63,94,0.07)', borderRadius: 8,
+              padding: 8, marginTop: 8,
+              borderWidth: 1, borderColor: 'rgba(244,63,94,0.18)',
+            }}>
+              <Ionicons name="warning-outline" size={12} color="#f43f5e" />
+              <Text style={{ color: '#f43f5e', fontSize: 11 }}>Sin fondos — las transacciones pueden fallar</Text>
+            </View>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -122,18 +235,15 @@ function RequestCard({ user: u, roleColor, onApprove, onReject, colors }) {
   return (
     <View style={{
       backgroundColor: colors.backgroundAlt,
-      borderRadius: 16, borderWidth: 1.5,
-      borderColor: `${roleColor}30`,
+      borderRadius: 16, borderWidth: 1, borderColor: `${roleColor}28`,
       marginBottom: 12, overflow: 'hidden',
-      ...(Platform.OS === 'web' && { boxShadow: `0 4px 20px ${roleColor}10` }),
     }}>
-      <View style={{ height: 3, backgroundColor: roleColor }} />
+      <View style={{ height: 2, backgroundColor: roleColor }} />
       <View style={{ padding: 14 }}>
-        {/* Cabecera */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
           <View style={{
-            width: 44, height: 44, borderRadius: 22,
-            backgroundColor: `${roleColor}18`, borderWidth: 2, borderColor: `${roleColor}35`,
+            width: 42, height: 42, borderRadius: 21,
+            backgroundColor: `${roleColor}15`, borderWidth: 1.5, borderColor: `${roleColor}30`,
             justifyContent: 'center', alignItems: 'center', marginRight: 12,
           }}>
             <Text style={{ color: roleColor, fontWeight: '800', fontSize: 15 }}>{initials}</Text>
@@ -144,11 +254,11 @@ function RequestCard({ user: u, roleColor, onApprove, onReject, colors }) {
                 {u.full_name || u.username}
               </Text>
               <View style={{
-                backgroundColor: `${roleColor}15`, borderRadius: 6,
-                paddingHorizontal: 7, paddingVertical: 2,
-                borderWidth: 1, borderColor: `${roleColor}30`,
+                backgroundColor: `${roleColor}12`, borderRadius: 5,
+                paddingHorizontal: 6, paddingVertical: 2,
+                borderWidth: 1, borderColor: `${roleColor}28`,
               }}>
-                <Text style={{ color: roleColor, fontSize: 10, fontWeight: '800', letterSpacing: 0.8 }}>
+                <Text style={{ color: roleColor, fontSize: 10, fontWeight: '800', letterSpacing: 0.6 }}>
                   {u.requested_role}
                 </Text>
               </View>
@@ -165,68 +275,55 @@ function RequestCard({ user: u, roleColor, onApprove, onReject, colors }) {
         {/* Wallet */}
         <View style={{
           flexDirection: 'row', alignItems: 'center', gap: 8,
-          backgroundColor: colors.surface, borderRadius: 10,
-          padding: 10, marginBottom: 12,
+          backgroundColor: colors.surface, borderRadius: 8,
+          paddingHorizontal: 10, paddingVertical: 8, marginBottom: 10,
           borderWidth: 1, borderColor: colors.border,
         }}>
-          <Ionicons name={u.wallet_address ? 'wallet' : 'wallet-outline'} size={14}
+          <Ionicons name={u.wallet_address ? 'wallet' : 'wallet-outline'} size={13}
             color={u.wallet_address ? '#10b981' : colors.textMuted} />
           <Text style={{
             color: u.wallet_address ? colors.text : colors.textMuted,
             fontSize: 11, flex: 1, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
           }} numberOfLines={1}>
-            {u.wallet_address || 'Wallet no vinculada'}
+            {u.wallet_address || 'Sin wallet'}
           </Text>
           {u.wallet_address && (
-            <View style={{ backgroundColor: '#10b98118', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 }}>
-              <Text style={{ color: '#10b981', fontSize: 10, fontWeight: '700' }}>VERIFICADA</Text>
+            <View style={{ backgroundColor: '#10b98115', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
+              <Text style={{ color: '#10b981', fontSize: 9, fontWeight: '700' }}>OK</Text>
             </View>
           )}
         </View>
 
-        {/* Carta */}
+        {/* Carta expandible */}
         <Pressable
           onPress={() => setExpanded(!expanded)}
           style={{
-            backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1,
-            borderColor: expanded ? `${roleColor}40` : colors.border,
+            backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1,
+            borderColor: expanded ? `${roleColor}35` : colors.border,
             overflow: 'hidden', marginBottom: 12,
           }}
         >
           <View style={{
-            flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10,
+            flexDirection: 'row', alignItems: 'center', padding: 10, gap: 8,
             borderBottomWidth: expanded ? 1 : 0, borderBottomColor: colors.border,
           }}>
-            <View style={{
-              width: 32, height: 32, borderRadius: 8,
-              backgroundColor: `${roleColor}12`,
-              justifyContent: 'center', alignItems: 'center',
-            }}>
-              <Ionicons name="document-text" size={15} color={roleColor} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>Carta de presentación</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 11 }}>
-                {u.request_message ? `${u.request_message.length} caracteres` : 'Sin mensaje adjunto'}
-              </Text>
-            </View>
-            <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={15} color={colors.textSecondary} />
+            <Ionicons name="document-text-outline" size={14} color={expanded ? roleColor : colors.textSecondary} />
+            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13, flex: 1 }}>
+              Carta de presentación
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+              {u.request_message ? `${u.request_message.length} car.` : 'Vacía'}
+            </Text>
+            <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
           </View>
           {expanded && (
-            <View style={{ padding: 14 }}>
-              {u.request_message ? (
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <View style={{ width: 2, backgroundColor: `${roleColor}50`, borderRadius: 1, marginTop: 3, alignSelf: 'stretch' }} />
-                  <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 22, flex: 1, fontStyle: 'italic' }}>
+            <View style={{ padding: 12 }}>
+              {u.request_message
+                ? <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20, fontStyle: 'italic' }}>
                     "{u.request_message}"
                   </Text>
-                </View>
-              ) : (
-                <View style={{ alignItems: 'center', paddingVertical: 10 }}>
-                  <Ionicons name="document-outline" size={26} color={colors.border} />
-                  <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 6 }}>Sin mensaje adjunto</Text>
-                </View>
-              )}
+                : <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center' }}>Sin mensaje adjunto</Text>
+              }
             </View>
           )}
         </Pressable>
@@ -237,25 +334,23 @@ function RequestCard({ user: u, roleColor, onApprove, onReject, colors }) {
             onPress={onReject}
             style={{
               flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-              paddingVertical: 10, borderRadius: 12, gap: 6,
-              backgroundColor: 'rgba(244,63,94,0.08)',
-              borderWidth: 1, borderColor: 'rgba(244,63,94,0.25)',
+              paddingVertical: 10, borderRadius: 10, gap: 5,
+              backgroundColor: 'rgba(244,63,94,0.07)',
+              borderWidth: 1, borderColor: 'rgba(244,63,94,0.22)',
             }}
           >
-            <Ionicons name="close-circle-outline" size={15} color="#f43f5e" />
+            <Ionicons name="close-circle-outline" size={14} color="#f43f5e" />
             <Text style={{ color: '#f43f5e', fontWeight: '700', fontSize: 13 }}>Rechazar</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onApprove}
             style={{
               flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-              paddingVertical: 10, borderRadius: 12, gap: 6,
-              backgroundColor: roleColor,
-              ...(Platform.OS === 'web' && { boxShadow: `0 4px 12px ${roleColor}40` }),
+              paddingVertical: 10, borderRadius: 10, gap: 5, backgroundColor: roleColor,
             }}
           >
-            <Ionicons name="checkmark-circle-outline" size={15} color="#fff" />
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Aprobar acceso</Text>
+            <Ionicons name="checkmark-circle-outline" size={14} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Aprobar</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -264,7 +359,7 @@ function RequestCard({ user: u, roleColor, onApprove, onReject, colors }) {
 }
 
 // ─── Active User Card ─────────────────────────────────────────────────────────
-function ActiveUserCard({ u, roleColor, roleType, onRevoke, colors }) {
+function ActiveUserCard({ u, roleColor, onRevoke, colors }) {
   const [copied, setCopied] = useState(false);
   const initials = (u.full_name || u.username || '?')
     .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
@@ -273,39 +368,40 @@ function ActiveUserCard({ u, roleColor, roleType, onRevoke, colors }) {
     if (!u.wallet_address) return;
     try {
       if (Platform.OS === 'web') await navigator.clipboard.writeText(u.wallet_address);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopied(true); setTimeout(() => setCopied(false), 2000);
     } catch {}
   };
 
   return (
     <View style={{
       backgroundColor: colors.backgroundAlt,
-      borderRadius: 14, borderWidth: 1, borderColor: colors.border,
-      padding: 12, marginBottom: 10,
+      borderRadius: 12, borderWidth: 1, borderColor: colors.border,
+      padding: 12, marginBottom: 8,
     }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: u.wallet_address ? 10 : 0 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <View style={{
-          width: 40, height: 40, borderRadius: 20,
-          backgroundColor: `${roleColor}15`, borderWidth: 1.5, borderColor: `${roleColor}28`,
-          justifyContent: 'center', alignItems: 'center', marginRight: 12,
+          width: 38, height: 38, borderRadius: 19,
+          backgroundColor: `${roleColor}12`, borderWidth: 1.5, borderColor: `${roleColor}25`,
+          justifyContent: 'center', alignItems: 'center',
         }}>
-          <Text style={{ color: roleColor, fontWeight: '800', fontSize: 14 }}>{initials}</Text>
+          <Text style={{ color: roleColor, fontWeight: '800', fontSize: 13 }}>{initials}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.text, fontWeight: '600', fontSize: 14 }}>{u.full_name || u.username}</Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 12 }}>@{u.username} · {u.email}</Text>
+          <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>
+            {u.full_name || u.username}
+          </Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 11 }}>@{u.username}</Text>
         </View>
         <TouchableOpacity
           onPress={onRevoke}
           style={{
-            flexDirection: 'row', alignItems: 'center', gap: 5,
-            paddingHorizontal: 12, paddingVertical: 7,
+            flexDirection: 'row', alignItems: 'center', gap: 4,
+            paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
             backgroundColor: 'rgba(244,63,94,0.07)',
-            borderRadius: 10, borderWidth: 1, borderColor: 'rgba(244,63,94,0.2)',
+            borderWidth: 1, borderColor: 'rgba(244,63,94,0.18)',
           }}
         >
-          <Ionicons name="remove-circle-outline" size={14} color="#f43f5e" />
+          <Ionicons name="remove-circle-outline" size={13} color="#f43f5e" />
           <Text style={{ color: '#f43f5e', fontWeight: '700', fontSize: 12 }}>Revocar</Text>
         </TouchableOpacity>
       </View>
@@ -314,19 +410,17 @@ function ActiveUserCard({ u, roleColor, roleType, onRevoke, colors }) {
           onPress={handleCopy}
           style={{
             flexDirection: 'row', alignItems: 'center', gap: 8,
-            backgroundColor: `${roleColor}08`, borderRadius: 8,
-            paddingHorizontal: 10, paddingVertical: 7,
-            borderWidth: 1, borderColor: `${roleColor}25`,
+            backgroundColor: `${roleColor}07`, borderRadius: 7,
+            paddingHorizontal: 10, paddingVertical: 6, marginTop: 8,
+            borderWidth: 1, borderColor: `${roleColor}20`,
           }}
         >
-          <Ionicons name={copied ? 'checkmark-circle' : 'wallet'} size={13} color={roleColor} />
+          <Ionicons name={copied ? 'checkmark-circle' : 'wallet-outline'} size={12} color={roleColor} />
           <Text style={{
-            flex: 1, fontSize: 11, color: colors.text,
+            flex: 1, fontSize: 10, color: colors.textSecondary,
             fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-          }} numberOfLines={1}>
-            {u.wallet_address}
-          </Text>
-          <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={12}
+          }} numberOfLines={1}>{u.wallet_address}</Text>
+          <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={11}
             color={copied ? '#10b981' : colors.textMuted} />
         </TouchableOpacity>
       )}
@@ -337,25 +431,25 @@ function ActiveUserCard({ u, roleColor, roleType, onRevoke, colors }) {
 // ─── Pantalla principal ───────────────────────────────────────────────────────
 export default function AdminScreen({ route, navigation }) {
   const { colors } = useTheme();
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= 900;
-  const { user } = route.params;
+  const { width }  = useWindowDimensions();
+  const isDesktop  = width >= 900;
+  const { user }   = route.params;
 
-  const [loggedUser, setLoggedUser]         = useState(user);
-  const [users, setUsers]                   = useState([]);
-  const [loadingUsers, setLoadingUsers]     = useState(true);
-  const [loadingWallet, setLoadingWallet]   = useState(false);
-  const [loadingPause, setLoadingPause]     = useState(false);
-  const [refreshing, setRefreshing]         = useState(false);
-  const [activeSection, setActiveSection]   = useState('pending');
-  const [marketPaused, setMarketPaused]     = useState(null);
-  const [logisticsStatus, setLogisticsStatus] = useState(null);
-  const [copiedLogistics, setCopiedLogistics] = useState(false);
-  const [customAlert, setCustomAlert] = useState({ visible: false, title: '', message: '', type: 'info' });
+  const [loggedUser,       setLoggedUser]       = useState(user);
+  const [users,            setUsers]            = useState([]);
+  const [loadingUsers,     setLoadingUsers]     = useState(true);
+  const [loadingWallet,    setLoadingWallet]    = useState(false);
+  const [loadingPause,     setLoadingPause]     = useState(false);
+  const [refreshing,       setRefreshing]       = useState(false);
+  const [activeSection,    setActiveSection]    = useState('pending');
+  const [marketPaused,     setMarketPaused]     = useState(null);
+  const [logisticsStatus,  setLogisticsStatus]  = useState(null);
+  const [copiedLogistics,  setCopiedLogistics]  = useState(false);
+  const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'info' });
 
   const showAlert = (title, message, type = 'error') =>
-    setCustomAlert({ visible: true, title, message, type });
-  const hideAlert = () => setCustomAlert(a => ({ ...a, visible: false }));
+    setAlert({ visible: true, title, message, type });
+  const hideAlert = () => setAlert(a => ({ ...a, visible: false }));
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchAll = useCallback(async (initial = false) => {
@@ -381,21 +475,15 @@ export default function AdminScreen({ route, navigation }) {
 
   useFocusEffect(useCallback(() => {
     fetchAll(true);
-
     const ws = new WebSocket(`${WS_URL}/ws/admin`);
-    ws.onmessage = (event) => {
-      try {
-        const msg = typeof event.data === 'string' ? event.data : '';
-        if (
-          msg === 'update_users' ||
-          msg === 'new_user_registered' ||
-          msg.startsWith('new_role_request') ||
-          msg.includes('marketplace_paused') ||
-          msg.includes('marketplace_resumed')
-        ) {
-          fetchAll(false);
-        }
-      } catch {}
+    ws.onmessage = ({ data }) => {
+      if (typeof data === 'string' && (
+        data === 'update_users' ||
+        data === 'new_user_registered' ||
+        data.startsWith('new_role_request') ||
+        data.includes('marketplace_paused') ||
+        data.includes('marketplace_resumed')
+      )) fetchAll(false);
     };
     ws.onerror = (e) => console.log('WS Admin error:', e?.message);
     return () => ws.close();
@@ -406,12 +494,12 @@ export default function AdminScreen({ route, navigation }) {
     try {
       if (action === 'revoke') {
         await api.post(`/admin/revoke-role/${userId}?role=${role}`);
-        showAlert('Rol revocado', `El permiso de ${role} ha sido eliminado.`, 'success');
+        showAlert('Rol revocado', `Permiso de ${role} eliminado.`, 'success');
       } else {
         await api.post(`/admin/approve-role/${userId}?action=${action}`);
         showAlert(
           action === 'approve' ? '¡Aprobado!' : 'Rechazado',
-          action === 'approve' ? 'El usuario ya tiene acceso a su panel profesional.' : 'La solicitud ha sido rechazada.',
+          action === 'approve' ? 'El usuario ya tiene acceso a su panel.' : 'Solicitud rechazada.',
           action === 'approve' ? 'success' : 'info',
         );
       }
@@ -424,14 +512,11 @@ export default function AdminScreen({ route, navigation }) {
   const handleToggleMarket = async () => {
     setLoadingPause(true);
     try {
-      const endpoint = marketPaused ? '/admin/marketplace-resume' : '/admin/marketplace-pause';
-      const { data } = await api.post(endpoint);
+      const { data } = await api.post(marketPaused ? '/admin/marketplace-resume' : '/admin/marketplace-pause');
       setMarketPaused(data.paused);
       showAlert(
         data.paused ? 'Marketplace pausado' : 'Marketplace reanudado',
-        data.paused
-          ? 'Las transacciones han sido bloqueadas temporalmente.'
-          : 'El marketplace vuelve a estar operativo.',
+        data.paused ? 'Las transacciones han sido bloqueadas.' : 'El marketplace vuelve a estar operativo.',
         data.paused ? 'warning' : 'success',
       );
     } catch (e) {
@@ -447,11 +532,11 @@ export default function AdminScreen({ route, navigation }) {
     try {
       setLoadingWallet(true);
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const address = accounts[0];
+      const address  = accounts[0];
       const { data: { nonce } } = await api.post('/auth/challenge', { address });
-      const signer = await new ethers.BrowserProvider(window.ethereum).getSigner();
+      const signer    = await new ethers.BrowserProvider(window.ethereum).getSigner();
       const signature = await signer.signMessage(nonce);
-      const { data } = await api.post('/auth/verify', { address, signature, nonce });
+      const { data }  = await api.post('/auth/verify', { address, signature, nonce });
       setLoggedUser(data);
       showAlert('Wallet vinculada', 'Tu cuenta Web3 está conectada.', 'success');
     } catch (e) {
@@ -475,7 +560,7 @@ export default function AdminScreen({ route, navigation }) {
 
   // ── Derivados ──────────────────────────────────────────────────────────────
   const allPending   = users.filter(u => u.requested_role && !u.is_admin);
-  const particulares = users.filter(u => !u.is_admin && !u.roles?.some(r => ['DEALER', 'RELOJERO', 'FABRICANTE'].includes(r)));
+  const particulares = users.filter(u => !u.is_admin && !u.roles?.some(r => ['DEALER','RELOJERO','FABRICANTE'].includes(r)));
   const stats = {
     total:       users.filter(u => !u.is_admin).length,
     pending:     allPending.length,
@@ -492,374 +577,195 @@ export default function AdminScreen({ route, navigation }) {
     { id: 'users',      label: 'Particulares', icon: 'people-outline',    badge: particulares.length || null },
   ];
 
-  // ── Render ─────────────────────────────────────────────────────────────────
-  const bg     = colors.background;
-  const cardBg = colors.backgroundAlt;
+  const renderContent = () => {
+    if (loadingUsers) return (
+      <View style={{ alignItems: 'center', paddingVertical: 60 }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ color: colors.textSecondary, marginTop: 10, fontSize: 13 }}>Cargando...</Text>
+      </View>
+    );
 
-  const leftPanel = (
-    <View style={{ gap: 0 }}>
-      {/* Perfil */}
-      <View style={{ marginBottom: 16 }}>
-        <UserInfo loggedUser={loggedUser} showAlert={showAlert} />
-        {!loggedUser?.wallet_address && (
-          <View style={{
-            backgroundColor: cardBg, borderRadius: 16,
-            borderWidth: 1, borderColor: colors.border,
-            padding: 14, flexDirection: 'row', alignItems: 'center', gap: 14,
+    if (activeSection === 'pending') {
+      if (!allPending.length) return (
+        <EmptyState icon="checkmark-circle-outline" title="Todo al día"
+          subtitle="No hay solicitudes pendientes." color="#10b981" colors={colors} />
+      );
+      return allPending.map(u => {
+        const meta = ROLE_META[u.requested_role] || { color: colors.primary };
+        return <RequestCard key={u.id} user={u} roleColor={meta.color} colors={colors}
+          onApprove={() => handleRoleAction(u.id, 'approve')}
+          onReject={() => handleRoleAction(u.id, 'reject')} />;
+      });
+    }
+
+    if (['RELOJERO','DEALER','FABRICANTE'].includes(activeSection)) {
+      const meta   = ROLE_META[activeSection];
+      const active = users.filter(u => u.roles?.includes(activeSection));
+      if (!active.length) return (
+        <EmptyState icon={`${meta.icon}-outline`} title={`Sin ${meta.label.toLowerCase()} aún`}
+          subtitle="Aparecerán aquí cuando apruebes solicitudes." color={meta.color} colors={colors} />
+      );
+      return active.map(u => (
+        <ActiveUserCard key={u.id} u={u} roleColor={meta.color} colors={colors}
+          onRevoke={() => handleRoleAction(u.id, 'revoke', activeSection)} />
+      ));
+    }
+
+    if (activeSection === 'users') {
+      if (!particulares.length) return (
+        <EmptyState icon="people-outline" title="Sin particulares"
+          subtitle="No hay usuarios particulares registrados." color={colors.primary} colors={colors} />
+      );
+      return particulares.map(u => {
+        const initials = (u.full_name || u.username || '?')
+          .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+        return (
+          <View key={u.id} style={{
+            flexDirection: 'row', alignItems: 'center',
+            backgroundColor: colors.backgroundAlt,
+            borderRadius: 12, borderWidth: 1, borderColor: colors.border,
+            padding: 12, marginBottom: 8, gap: 10,
           }}>
             <View style={{
-              width: 42, height: 42, borderRadius: 12,
-              backgroundColor: 'rgba(246,133,27,0.12)',
+              width: 38, height: 38, borderRadius: 19,
+              backgroundColor: `${colors.primary}10`, borderWidth: 1.5, borderColor: `${colors.primary}22`,
               justifyContent: 'center', alignItems: 'center',
             }}>
-              <Ionicons name="wallet-outline" size={20} color="#F6851B" />
+              <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 13 }}>{initials}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Wallet no vinculada</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Conecta MetaMask para operaciones blockchain</Text>
+              <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{u.full_name || u.username}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11 }}>@{u.username} · {u.email}</Text>
             </View>
-            <TouchableOpacity
-              onPress={handleConnectWallet} disabled={loadingWallet}
-              style={{ paddingHorizontal: 14, paddingVertical: 9, backgroundColor: '#F6851B', borderRadius: 12 }}
-            >
-              {loadingWallet
-                ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Conectar</Text>}
-            </TouchableOpacity>
+            <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+              {u.created_at ? new Date(u.created_at).toLocaleDateString('es-ES') : ''}
+            </Text>
+          </View>
+        );
+      });
+    }
+  };
+
+  // ── Sidebar izquierdo ──────────────────────────────────────────────────────
+  const sidebar = (
+    <View style={{ width: isDesktop ? 300 : '100%', gap: 12 }}>
+
+      {/* Perfil */}
+      <View style={{
+        backgroundColor: colors.backgroundAlt, borderRadius: 16,
+        borderWidth: 1, borderColor: colors.border, padding: 16,
+      }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{
+            width: 48, height: 48, borderRadius: 24,
+            backgroundColor: 'rgba(168,85,247,0.12)',
+            borderWidth: 2, borderColor: 'rgba(168,85,247,0.3)',
+            justifyContent: 'center', alignItems: 'center',
+          }}>
+            <Text style={{ color: '#a855f7', fontWeight: '800', fontSize: 18 }}>
+              {(loggedUser?.username?.[0] || 'A').toUpperCase()}
+            </Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>
+              {loggedUser?.username}
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{loggedUser?.email}</Text>
+          </View>
+          <View style={{
+            backgroundColor: 'rgba(168,85,247,0.12)', borderRadius: 8,
+            paddingHorizontal: 8, paddingVertical: 4,
+            borderWidth: 1, borderColor: 'rgba(168,85,247,0.25)',
+          }}>
+            <Text style={{ color: '#a855f7', fontSize: 10, fontWeight: '800', letterSpacing: 1 }}>ADMIN</Text>
+          </View>
+        </View>
+
+        {!loggedUser?.wallet_address ? (
+          <TouchableOpacity
+            onPress={handleConnectWallet} disabled={loadingWallet}
+            style={{
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+              marginTop: 12, paddingVertical: 10, borderRadius: 10,
+              backgroundColor: '#F6851B20',
+              borderWidth: 1, borderColor: '#F6851B40',
+            }}
+          >
+            {loadingWallet
+              ? <ActivityIndicator color="#F6851B" size="small" />
+              : <>
+                  <Ionicons name="wallet-outline" size={15} color="#F6851B" />
+                  <Text style={{ color: '#F6851B', fontWeight: '700', fontSize: 13 }}>Conectar MetaMask</Text>
+                </>
+            }
+          </TouchableOpacity>
+        ) : (
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 6,
+            marginTop: 10, backgroundColor: '#10b98110', borderRadius: 8,
+            paddingHorizontal: 10, paddingVertical: 6,
+            borderWidth: 1, borderColor: '#10b98122',
+          }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10b981' }} />
+            <Text style={{
+              flex: 1, color: colors.textSecondary, fontSize: 10,
+              fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+            }} numberOfLines={1}>{loggedUser.wallet_address}</Text>
           </View>
         )}
       </View>
 
-      {/* Marketplace status */}
+      {/* Stats */}
+      {!loadingUsers && (
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <StatCard icon="people"     value={stats.total}       label="Usuarios"    color={colors.primary}       colors={colors} />
+          <StatCard icon="time"       value={stats.pending}     label="Pendientes"  color="#f59e0b"              colors={colors} />
+          <StatCard icon="build"      value={stats.relojeros}   label="Relojeros"   color={roleColors.RELOJERO}   colors={colors} />
+          <StatCard icon="storefront" value={stats.dealers}     label="Dealers"     color={roleColors.DEALER}     colors={colors} />
+          <StatCard icon="business"   value={stats.fabricantes} label="Fab."        color={roleColors.FABRICANTE} colors={colors} />
+        </View>
+      )}
+
+      {/* Marketplace + Logística */}
       {marketPaused !== null && (
-        <MarketplaceStatusCard
+        <MarketplaceCard
           paused={marketPaused}
           loading={loadingPause}
           onToggle={handleToggleMarket}
+          logisticsStatus={logisticsStatus}
+          copiedLogistics={copiedLogistics}
+          onCopyLogistics={async () => {
+            if (!logisticsStatus?.address) return;
+            try { await Clipboard.setStringAsync(logisticsStatus.address); } catch {}
+            setCopiedLogistics(true);
+            setTimeout(() => setCopiedLogistics(false), 2000);
+          }}
           colors={colors}
         />
-      )}
-
-      {/* Sistema Logístico */}
-      {logisticsStatus && (
-        <View style={{
-          backgroundColor: cardBg, borderRadius: 16, borderWidth: 1,
-          borderColor: logisticsStatus.balance_eth === 0
-            ? 'rgba(244,63,94,0.35)' : 'rgba(99,102,241,0.2)',
-          padding: 14, marginBottom: 16,
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <View style={{
-              width: 34, height: 34, borderRadius: 9,
-              backgroundColor: 'rgba(99,102,241,0.12)',
-              justifyContent: 'center', alignItems: 'center',
-            }}>
-              <Ionicons name="send-outline" size={16} color="#6366f1" />
-            </View>
-            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13, flex: 1 }}>Sistema Logístico</Text>
-            {logisticsStatus.balance_eth != null && (
-              <Text style={{
-                fontWeight: '800', fontSize: 14,
-                color: logisticsStatus.balance_eth === 0 ? '#f43f5e'
-                  : logisticsStatus.balance_eth < 0.01 ? '#f59e0b' : '#10b981',
-              }}>
-                {logisticsStatus.balance_eth.toFixed(4)} POL
-              </Text>
-            )}
-          </View>
-          <TouchableOpacity
-            disabled={!logisticsStatus.address}
-            onPress={async () => {
-              if (!logisticsStatus.address) return;
-              try {
-                await Clipboard.setStringAsync(logisticsStatus.address);
-                setCopiedLogistics(true);
-                setTimeout(() => setCopiedLogistics(false), 2000);
-              } catch {}
-            }}
-            style={{
-              flexDirection: 'row', alignItems: 'center', gap: 8,
-              backgroundColor: colors.background, borderRadius: 10,
-              paddingHorizontal: 12, paddingVertical: 9,
-              borderWidth: 1, borderColor: colors.border,
-            }}
-          >
-            <Text numberOfLines={1} style={{
-              flex: 1, color: colors.textSecondary, fontSize: 10,
-              fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-            }}>
-              {logisticsStatus.address || 'No configurada'}
-            </Text>
-            {logisticsStatus.address && (
-              <Ionicons
-                name={copiedLogistics ? 'checkmark' : 'copy-outline'}
-                size={13}
-                color={copiedLogistics ? '#10b981' : colors.textMuted}
-              />
-            )}
-          </TouchableOpacity>
-          {logisticsStatus.balance_eth === 0 && (
-            <View style={{
-              flexDirection: 'row', alignItems: 'center', gap: 6,
-              backgroundColor: 'rgba(244,63,94,0.08)', borderRadius: 8,
-              padding: 8, marginTop: 10,
-              borderWidth: 1, borderColor: 'rgba(244,63,94,0.2)',
-            }}>
-              <Ionicons name="warning-outline" size={14} color="#f43f5e" />
-              <Text style={{ color: '#f43f5e', fontSize: 12, fontWeight: '600' }}>
-                Sin fondos — las transacciones blockchain pueden fallar
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* Stats */}
-      {!loadingUsers && (
-        <View style={{ gap: 10, marginBottom: 4 }}>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <StatCard icon="people"     value={stats.total}   label="Usuarios"   color={colors.primary}       colors={colors} />
-            <StatCard icon="time"       value={stats.pending} label="Pendientes" color="#f59e0b"              colors={colors} />
-          </View>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <StatCard icon="build"      value={stats.relojeros}   label="Relojeros"   color={roleColors.RELOJERO}   colors={colors} />
-            <StatCard icon="storefront" value={stats.dealers}     label="Dealers"     color={roleColors.DEALER}     colors={colors} />
-            <StatCard icon="business"   value={stats.fabricantes} label="Fabricantes" color={roleColors.FABRICANTE} colors={colors} />
-          </View>
-        </View>
-      )}
-    </View>
-  );
-
-  const rightPanel = (
-    <View style={{ flex: 1 }}>
-      {/* Tabs */}
-      <ScrollView
-        horizontal showsHorizontalScrollIndicator={false}
-        style={{ marginBottom: 16 }}
-        contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
-      >
-        {SECTIONS.map(sec => {
-          const isFocused = activeSection === sec.id;
-          const secColor = sec.id === 'pending' ? '#f59e0b'
-            : sec.id === 'users' ? colors.primary
-            : ROLE_META[sec.id]?.color || colors.primary;
-          return (
-            <Pressable
-              key={sec.id}
-              onPress={() => setActiveSection(sec.id)}
-              style={[
-                {
-                  flexDirection: 'row', alignItems: 'center', gap: 7,
-                  paddingHorizontal: 14, paddingVertical: 9,
-                  borderRadius: 12, borderWidth: 1.5,
-                  borderColor: isFocused ? secColor : colors.border,
-                  backgroundColor: isFocused ? `${secColor}12` : cardBg,
-                },
-                Platform.OS === 'web' && { cursor: 'pointer' },
-              ]}
-            >
-              <Ionicons name={sec.icon} size={14} color={isFocused ? secColor : colors.textSecondary} />
-              <Text style={{
-                color: isFocused ? secColor : colors.textSecondary,
-                fontWeight: isFocused ? '700' : '500', fontSize: 13,
-              }}>
-                {sec.label}
-              </Text>
-              {sec.badge > 0 && (
-                <View style={{
-                  backgroundColor: sec.id === 'pending' ? '#f59e0b' : (ROLE_META[sec.id]?.color || colors.primary),
-                  borderRadius: 9, minWidth: 18, height: 18,
-                  justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4,
-                }}>
-                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>{sec.badge}</Text>
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      {/* Contenido */}
-      {loadingUsers ? (
-        <View style={{ alignItems: 'center', paddingVertical: 60 }}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={{ color: colors.textSecondary, marginTop: 12 }}>Cargando datos...</Text>
-        </View>
-      ) : (
-        <>
-          {/* Solicitudes */}
-          {activeSection === 'pending' && (
-            <>
-              {allPending.length === 0 ? (
-                <EmptyState icon="checkmark-circle-outline" title="Todo al día"
-                  subtitle="No hay solicitudes de rol pendientes de revisión."
-                  color="#10b981" colors={colors} />
-              ) : (
-                <>
-                  <SectionHeader
-                    title={`${allPending.length} solicitud${allPending.length !== 1 ? 'es' : ''} pendiente${allPending.length !== 1 ? 's' : ''}`}
-                    subtitle="Revisa y aprueba o rechaza el acceso profesional."
-                    color="#f59e0b" colors={colors}
-                  />
-                  {allPending.map(u => {
-                    const meta = ROLE_META[u.requested_role] || { color: colors.primary };
-                    return (
-                      <RequestCard key={u.id} user={u} roleColor={meta.color} colors={colors}
-                        onApprove={() => handleRoleAction(u.id, 'approve')}
-                        onReject={() => handleRoleAction(u.id, 'reject')}
-                      />
-                    );
-                  })}
-                </>
-              )}
-            </>
-          )}
-
-          {/* Por rol */}
-          {['RELOJERO', 'DEALER', 'FABRICANTE'].includes(activeSection) && (() => {
-            const meta   = ROLE_META[activeSection];
-            const active = users.filter(u => u.roles?.includes(activeSection));
-            return (
-              <>
-                <SectionHeader
-                  title={`${active.length} ${meta.label.toLowerCase()} activo${active.length !== 1 ? 's' : ''}`}
-                  subtitle={`Gestiona los permisos del rol ${activeSection}.`}
-                  color={meta.color} colors={colors}
-                />
-                {active.length === 0 ? (
-                  <EmptyState icon={`${meta.icon}-outline`} title={`Sin ${meta.label.toLowerCase()} aún`}
-                    subtitle="Cuando apruebes solicitudes aparecerán aquí."
-                    color={meta.color} colors={colors} />
-                ) : (
-                  active.map(u => (
-                    <ActiveUserCard key={u.id} u={u} roleColor={meta.color} roleType={activeSection}
-                      colors={colors} onRevoke={() => handleRoleAction(u.id, 'revoke', activeSection)} />
-                  ))
-                )}
-              </>
-            );
-          })()}
-
-          {/* Particulares */}
-          {activeSection === 'users' && (
-            <>
-              <SectionHeader
-                title={`${particulares.length} particular${particulares.length !== 1 ? 'es' : ''}`}
-                subtitle="Usuarios registrados sin rol profesional."
-                color={colors.primary} colors={colors}
-              />
-              {particulares.length === 0 ? (
-                <EmptyState icon="people-outline" title="Sin particulares"
-                  subtitle="No hay usuarios particulares registrados."
-                  color={colors.primary} colors={colors} />
-              ) : (
-                particulares.map(u => {
-                  const initials = (u.full_name || u.username || '?')
-                    .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
-                  return (
-                    <View key={u.id} style={{
-                      flexDirection: 'row', alignItems: 'center',
-                      backgroundColor: cardBg, borderRadius: 14,
-                      borderWidth: 1, borderColor: colors.border,
-                      padding: 12, marginBottom: 10, gap: 12,
-                    }}>
-                      <View style={{
-                        width: 40, height: 40, borderRadius: 20,
-                        backgroundColor: `${colors.primary}12`,
-                        borderWidth: 1.5, borderColor: `${colors.primary}28`,
-                        justifyContent: 'center', alignItems: 'center',
-                      }}>
-                        <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 14 }}>{initials}</Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ color: colors.text, fontWeight: '600', fontSize: 14 }}>
-                          {u.full_name || u.username}
-                        </Text>
-                        <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                          @{u.username} · {u.email}
-                        </Text>
-                      </View>
-                      <Text style={{ color: colors.textMuted, fontSize: 11 }}>
-                        {u.created_at ? new Date(u.created_at).toLocaleDateString('es-ES') : ''}
-                      </Text>
-                    </View>
-                  );
-                })
-              )}
-            </>
-          )}
-        </>
       )}
     </View>
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: bg }}>
-      {/* HEADER */}
-      <View style={{
-        flexDirection: 'row', alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: Platform.OS === 'ios' ? 56 : 20,
-        paddingBottom: 16,
-        backgroundColor: cardBg,
-        borderBottomWidth: 1, borderBottomColor: colors.border,
-        ...(Platform.OS === 'web' && { boxShadow: '0 1px 0 rgba(255,255,255,0.05)' }),
-      }}>
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-            {Platform.OS === 'web' ? (
-              <Image source={require('../../assets/axia-icons/axia-wordmark-purple.svg')}
-                style={{ width: 48, height: 16 }} resizeMode="contain" />
-            ) : (
-              <Text style={{ color: colors.primary, fontSize: 18, fontWeight: '900', letterSpacing: 3 }}>AXIA</Text>
-            )}
-            <View style={{
-              backgroundColor: 'rgba(168,85,247,0.12)', borderRadius: 6,
-              paddingHorizontal: 8, paddingVertical: 3,
-              borderWidth: 1, borderColor: 'rgba(168,85,247,0.3)',
-            }}>
-              <Text style={{ color: '#a855f7', fontSize: 9, fontWeight: '800', letterSpacing: 1.5 }}>
-                PANEL DE CONTROL
-              </Text>
-            </View>
-            {marketPaused && (
-              <View style={{
-                backgroundColor: 'rgba(244,63,94,0.12)', borderRadius: 6,
-                paddingHorizontal: 8, paddingVertical: 3,
-                borderWidth: 1, borderColor: 'rgba(244,63,94,0.35)',
-                flexDirection: 'row', alignItems: 'center', gap: 4,
-              }}>
-                <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#f43f5e' }} />
-                <Text style={{ color: '#f43f5e', fontSize: 9, fontWeight: '800', letterSpacing: 1 }}>
-                  MARKETPLACE PAUSADO
-                </Text>
-              </View>
-            )}
-          </View>
-          <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-            {loggedUser?.full_name || loggedUser?.username}
-          </Text>
-        </View>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <AdminHeader
+        user={loggedUser}
+        marketPaused={marketPaused}
+        onLogout={handleLogout}
+        colors={colors}
+      />
 
-        <TouchableOpacity
-          onPress={handleLogout}
-          style={{
-            flexDirection: 'row', alignItems: 'center', gap: 6,
-            paddingHorizontal: 14, paddingVertical: 9,
-            backgroundColor: 'rgba(244,63,94,0.08)',
-            borderRadius: 12, borderWidth: 1, borderColor: 'rgba(244,63,94,0.2)',
-          }}
-        >
-          <Ionicons name="log-out-outline" size={15} color="#f43f5e" />
-          <Text style={{ color: '#f43f5e', fontWeight: '700', fontSize: 13 }}>Salir</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* BODY */}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 80 }}
+        contentContainerStyle={{
+          maxWidth: isDesktop ? 1100 : undefined,
+          alignSelf: 'center', width: '100%',
+          padding: isDesktop ? 24 : 16,
+          paddingBottom: 80,
+          flexDirection: isDesktop ? 'row' : 'column',
+          alignItems: isDesktop ? 'flex-start' : 'stretch',
+          gap: 20,
+        }}
         refreshControl={
           <RefreshControl refreshing={refreshing}
             onRefresh={() => { setRefreshing(true); fetchAll(false); }}
@@ -867,60 +773,97 @@ export default function AdminScreen({ route, navigation }) {
         }
         showsVerticalScrollIndicator={false}
       >
-        {isDesktop ? (
-          // Layout escritorio: dos columnas
-          <View style={{
-            flexDirection: 'row', alignItems: 'flex-start',
-            maxWidth: 1100, alignSelf: 'center', width: '100%',
-            padding: 24, gap: 24,
-          }}>
-            <View style={{ width: 340 }}>{leftPanel}</View>
-            <View style={{ flex: 1 }}>{rightPanel}</View>
-          </View>
-        ) : (
-          // Layout móvil: columna única
-          <View style={{ maxWidth: 860, alignSelf: 'center', width: '100%', padding: 16 }}>
-            {leftPanel}
-            <View style={{ marginTop: 8 }}>{rightPanel}</View>
-          </View>
-        )}
+        {sidebar}
+
+        {/* Panel derecho */}
+        <View style={{ flex: 1, minWidth: 0 }}>
+          {/* Tabs */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}
+            style={{ marginBottom: 14 }}
+            contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
+            {SECTIONS.map(sec => {
+              const on = activeSection === sec.id;
+              const c  = sec.id === 'pending' ? '#f59e0b'
+                : sec.id === 'users' ? colors.primary
+                : ROLE_META[sec.id]?.color || colors.primary;
+              return (
+                <Pressable key={sec.id} onPress={() => setActiveSection(sec.id)}
+                  style={[{
+                    flexDirection: 'row', alignItems: 'center', gap: 6,
+                    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, borderWidth: 1.5,
+                    borderColor: on ? c : colors.border,
+                    backgroundColor: on ? `${c}10` : colors.backgroundAlt,
+                  }, Platform.OS === 'web' && { cursor: 'pointer' }]}
+                >
+                  <Ionicons name={sec.icon} size={14} color={on ? c : colors.textSecondary} />
+                  <Text style={{ color: on ? c : colors.textSecondary, fontWeight: on ? '700' : '500', fontSize: 13 }}>
+                    {sec.label}
+                  </Text>
+                  {sec.badge > 0 && (
+                    <View style={{
+                      backgroundColor: sec.id === 'pending' ? '#f59e0b' : ROLE_META[sec.id]?.color || colors.primary,
+                      borderRadius: 9, minWidth: 18, height: 18,
+                      justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4,
+                    }}>
+                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>{sec.badge}</Text>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {/* Título sección */}
+          {!loadingUsers && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <View style={{
+                width: 3, height: 16, borderRadius: 2,
+                backgroundColor: activeSection === 'pending' ? '#f59e0b'
+                  : activeSection === 'users' ? colors.primary
+                  : ROLE_META[activeSection]?.color || colors.primary,
+              }} />
+              <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>
+                {activeSection === 'pending' && `${allPending.length} solicitud${allPending.length !== 1 ? 'es' : ''} pendiente${allPending.length !== 1 ? 's' : ''}`}
+                {['RELOJERO','DEALER','FABRICANTE'].includes(activeSection) && `${users.filter(u => u.roles?.includes(activeSection)).length} ${ROLE_META[activeSection].label.toLowerCase()} activos`}
+                {activeSection === 'users' && `${particulares.length} particular${particulares.length !== 1 ? 'es' : ''}`}
+              </Text>
+            </View>
+          )}
+
+          {renderContent()}
+        </View>
       </ScrollView>
 
-      {/* MODAL ALERTAS */}
-      <Modal visible={customAlert.visible} transparent animationType="fade">
+      {/* Modal alerta */}
+      <Modal visible={alert.visible} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' }}>
           <View style={{
-            backgroundColor: cardBg, borderRadius: 22,
-            padding: 28, width: '85%', maxWidth: 360,
+            backgroundColor: colors.backgroundAlt, borderRadius: 20,
+            padding: 28, width: '85%', maxWidth: 340,
             alignItems: 'center', borderWidth: 1, borderColor: colors.border,
             ...(Platform.OS === 'web' && { boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }),
           }}>
             <View style={{
-              width: 64, height: 64, borderRadius: 32,
-              backgroundColor: `${alertColors[customAlert.type] || alertColors.info}12`,
-              justifyContent: 'center', alignItems: 'center', marginBottom: 16,
+              width: 60, height: 60, borderRadius: 30, marginBottom: 14,
+              backgroundColor: `${alertColors[alert.type] || alertColors.info}12`,
+              justifyContent: 'center', alignItems: 'center',
             }}>
               <Ionicons
-                name={
-                  customAlert.type === 'success' ? 'checkmark-circle' :
-                  customAlert.type === 'warning' ? 'warning' :
-                  customAlert.type === 'info'    ? 'information-circle' : 'alert-circle'
-                }
-                size={36}
-                color={alertColors[customAlert.type] || alertColors.info}
+                name={alert.type === 'success' ? 'checkmark-circle' : alert.type === 'warning' ? 'warning' : alert.type === 'info' ? 'information-circle' : 'alert-circle'}
+                size={32} color={alertColors[alert.type] || alertColors.info}
               />
             </View>
-            <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', textAlign: 'center', marginBottom: 8 }}>
-              {customAlert.title}
+            <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', textAlign: 'center', marginBottom: 8 }}>
+              {alert.title}
             </Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 24 }}>
-              {customAlert.message}
+            <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center', lineHeight: 20, marginBottom: 22 }}>
+              {alert.message}
             </Text>
-            <TouchableOpacity
-              onPress={hideAlert}
-              style={{ backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 13, width: '100%', alignItems: 'center' }}
-            >
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Entendido</Text>
+            <TouchableOpacity onPress={hideAlert} style={{
+              backgroundColor: colors.primary, borderRadius: 12,
+              paddingVertical: 12, width: '100%', alignItems: 'center',
+            }}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Entendido</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -930,30 +873,18 @@ export default function AdminScreen({ route, navigation }) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function SectionHeader({ title, subtitle, color, colors }) {
-  return (
-    <View style={{ marginBottom: 14 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-        <View style={{ width: 3, height: 16, backgroundColor: color, borderRadius: 2 }} />
-        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }}>{title}</Text>
-      </View>
-      <Text style={{ color: colors.textSecondary, fontSize: 12, paddingLeft: 11 }}>{subtitle}</Text>
-    </View>
-  );
-}
-
 function EmptyState({ icon, title, subtitle, color, colors }) {
   return (
     <View style={{ alignItems: 'center', paddingVertical: 48 }}>
       <View style={{
-        width: 68, height: 68, borderRadius: 34,
-        backgroundColor: `${color}10`, borderWidth: 1.5, borderColor: `${color}22`,
-        justifyContent: 'center', alignItems: 'center', marginBottom: 14,
+        width: 64, height: 64, borderRadius: 32,
+        backgroundColor: `${color}10`, borderWidth: 1.5, borderColor: `${color}20`,
+        justifyContent: 'center', alignItems: 'center', marginBottom: 12,
       }}>
-        <Ionicons name={icon} size={30} color={`${color}70`} />
+        <Ionicons name={icon} size={28} color={`${color}70`} />
       </View>
       <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600', marginBottom: 5 }}>{title}</Text>
-      <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center', maxWidth: 260 }}>{subtitle}</Text>
+      <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center', maxWidth: 240 }}>{subtitle}</Text>
     </View>
   );
 }
