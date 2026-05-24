@@ -884,13 +884,15 @@ export default function AdminScreen({ route, navigation }) {
     fetchAll(true);
     const ws = new WebSocket(`${WS_URL}/ws/admin`);
     ws.onmessage = ({ data }) => {
-      if (typeof data === 'string' && (
-        data === 'update_users' ||
-        data === 'new_user_registered' ||
-        data.startsWith('new_role_request') ||
-        data.includes('marketplace_paused') ||
-        data.includes('marketplace_resumed')
-      )) fetchAll(false);
+      let type = data;
+      try { type = JSON.parse(data)?.type ?? data; } catch {}
+      if (
+        type === 'update_users' ||
+        type === 'new_user_registered' ||
+        String(data).startsWith('new_role_request') ||
+        type === 'marketplace_paused' ||
+        type === 'marketplace_resumed'
+      ) fetchAll(false);
     };
     ws.onerror = (e) => console.log('WS Admin error:', e?.message);
     return () => ws.close();

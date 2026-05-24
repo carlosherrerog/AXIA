@@ -379,6 +379,7 @@ def register_user(request: Request, background_tasks: BackgroundTasks, user: use
         extra
     )
     background_tasks.add_task(send_email, new_user.email, "AXIA · Confirma tu correo electrónico", html)
+    background_tasks.add_task(manager.broadcast, {"type": "new_user_registered"})
 
     return new_user
 
