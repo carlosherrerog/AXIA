@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ethers } from 'ethers';
 import * as SecureStore from 'expo-secure-store';
 import * as Clipboard from 'expo-clipboard';
+import { Linking } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import api, { WS_URL } from '../api/api.js';
 import { roleColors, alertColors } from '../themes/styles.js';
@@ -804,6 +805,166 @@ function ActiveUserCard({ u, roleColor, onRevoke, colors }) {
 }
 
 // ─── Pantalla principal ───────────────────────────────────────────────────────
+const EXPLORER_BASE = 'https://amoy.polygonscan.com/address/';
+
+const CONTRACTS = [
+  {
+    key: 'nft',
+    label: 'WatchNFT',
+    icon: 'disc-outline',
+    color: '#8b5cf6',
+    address: process.env.EXPO_PUBLIC_WATCH_NFT_ADDRESS,
+    desc: 'ERC-721 · Autenticación de relojes',
+  },
+  {
+    key: 'market',
+    label: 'Marketplace',
+    icon: 'storefront-outline',
+    color: '#3b82f6',
+    address: process.env.EXPO_PUBLIC_MARKETPLACE_ADDRESS,
+    desc: 'Escrow · Compraventa y liquidaciones',
+  },
+  {
+    key: 'auction',
+    label: 'WatchAuction',
+    icon: 'hammer-outline',
+    color: '#f59e0b',
+    address: process.env.EXPO_PUBLIC_AUCTION_ADDRESS,
+    desc: 'Subastas con puja mínima',
+  },
+  {
+    key: 'sig',
+    label: 'Signature',
+    icon: 'shield-checkmark-outline',
+    color: '#10b981',
+    address: process.env.EXPO_PUBLIC_SIGNATURE_VERIFIER_ADDRESS,
+    desc: 'Verificación de seguridad NFC',
+  },
+  {
+    key: 'usdc',
+    label: 'MockUSDC',
+    icon: 'cash-outline',
+    color: '#22c55e',
+    address: process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS,
+    desc: 'Stablecoin de pagos (USDC)',
+  },
+];
+
+function ContractsPanel({ colors, stats, users }) {
+  const [copiedKey, setCopiedKey] = useState(null);
+
+  const handleCopy = async (key, address) => {
+    if (!address) return;
+    await Clipboard.setStringAsync(address);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 1500);
+  };
+
+  const shortAddr = (addr) => addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : '—';
+
+  const statItems = [
+    { icon: 'people-outline',           label: 'Usuarios',   value: stats?.total      ?? users.length, color: colors.primary },
+    { icon: 'storefront-outline',        label: 'Dealers',    value: stats?.dealers    ?? 0,            color: roleColors.DEALER },
+    { icon: 'build-outline',             label: 'Relojeros',  value: stats?.relojeros  ?? 0,            color: roleColors.RELOJERO },
+    { icon: 'business-outline',          label: 'Fabricantes',value: stats?.fabricantes ?? 0,           color: roleColors.FABRICANTE },
+  ];
+
+  return (
+    <View style={{
+      backgroundColor: colors.backgroundAlt,
+      borderRadius: 16, borderWidth: 1, borderColor: colors.border,
+      marginBottom: 18, overflow: 'hidden',
+    }}>
+      <View style={{ height: 2, backgroundColor: '#8b5cf6' }} />
+      <View style={{ padding: 18 }}>
+
+        {/* Cabecera */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <View style={{
+            width: 34, height: 34, borderRadius: 10,
+            backgroundColor: '#8b5cf615', borderWidth: 1, borderColor: '#8b5cf640',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Ionicons name="code-slash-outline" size={17} color="#8b5cf6" />
+          </View>
+          <View>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>Contratos desplegados</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 1 }}>Polygon Amoy Testnet</Text>
+          </View>
+        </View>
+
+        {/* Estadísticas rápidas */}
+        <View style={{
+          flexDirection: 'row', gap: 8, marginBottom: 16,
+          flexWrap: 'wrap',
+        }}>
+          {statItems.map(s => (
+            <View key={s.label} style={{
+              flex: 1, minWidth: 70,
+              backgroundColor: s.color + '12',
+              borderRadius: 10, borderWidth: 1, borderColor: s.color + '30',
+              padding: 10, alignItems: 'center',
+            }}>
+              <Ionicons name={s.icon} size={14} color={s.color} style={{ marginBottom: 4 }} />
+              <Text style={{ color: s.color, fontWeight: '800', fontSize: 16 }}>{s.value}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 10, marginTop: 1 }}>{s.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Lista de contratos */}
+        {CONTRACTS.filter(c => c.address).map((c, i, arr) => (
+          <View key={c.key} style={{
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            paddingVertical: 11,
+            borderBottomWidth: i < arr.length - 1 ? 1 : 0,
+            borderBottomColor: colors.border,
+          }}>
+            <View style={{
+              width: 32, height: 32, borderRadius: 9,
+              backgroundColor: c.color + '15', borderWidth: 1, borderColor: c.color + '35',
+              alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <Ionicons name={c.icon} size={15} color={c.color} />
+            </View>
+
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>{c.label}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 1 }}>{c.desc}</Text>
+            </View>
+
+            <Text style={{
+              color: colors.textSecondary, fontSize: 12, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
+              marginRight: 6,
+            }}>
+              {shortAddr(c.address)}
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => handleCopy(c.key, c.address)}
+              style={{ padding: 5 }}
+            >
+              <Ionicons
+                name={copiedKey === c.key ? 'checkmark-outline' : 'copy-outline'}
+                size={15}
+                color={copiedKey === c.key ? '#10b981' : colors.textMuted}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => Linking.openURL(`${EXPLORER_BASE}${c.address}`)}
+              style={{ padding: 5 }}
+            >
+              <Ionicons name="open-outline" size={15} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        ))}
+
+      </View>
+    </View>
+  );
+}
+
 export default function AdminScreen({ route, navigation }) {
   const { colors } = useTheme();
   const { width }  = useWindowDimensions();
@@ -1239,6 +1400,10 @@ export default function AdminScreen({ route, navigation }) {
 
         {/* Panel derecho */}
         <View style={{ flex: 1, minWidth: 0 }}>
+
+          {/* ── Contratos desplegados ── */}
+          <ContractsPanel colors={colors} stats={stats} users={users} />
+
           {/* Tabs */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
             style={{ marginBottom: 14 }}
