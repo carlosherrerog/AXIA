@@ -26,6 +26,11 @@ if config.config_file_name is not None:
 # 3. ASIGNAR LOS METADATOS (Sustituye al 'target_metadata = None')
 target_metadata = Base.metadata
 
+# En producción, usar DATABASE_URL del entorno en vez de alembic.ini
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    config.set_main_option("sqlalchemy.url", database_url)
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  ActivityIndicator, Platform, Switch, Linking, Modal,
+  ActivityIndicator, Platform, Linking, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
@@ -102,7 +102,6 @@ export default function ConfiguracionScreen({ navigation }) {
   const [showNext, setShowNext]       = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const [collectionPublic, setCollectionPublic] = useState(false);
   const [confirmDialog, setConfirmDialog]       = useState(null);
   const [roleModal, setRoleModal]               = useState(false);
 
@@ -112,7 +111,6 @@ export default function ConfiguracionScreen({ navigation }) {
         const res = await api.get('/users/me');
         setLoggedUser(res.data);
         setForm({ full_name: res.data.full_name || '', location: res.data.location || '' });
-        setCollectionPublic(res.data.is_collection_public || false);
       } catch (e) {
         console.error('Error cargando perfil:', e);
       } finally {
@@ -159,19 +157,6 @@ export default function ConfiguracionScreen({ navigation }) {
       showAlert('Error', e.response?.data?.detail || 'No se pudo cambiar la contraseña.', 'error');
     } finally {
       setSavingPassword(false);
-    }
-  };
-
-  // ── Colección pública ───────────────────────────────────────────────────
-
-  const handleToggleCollection = async (value) => {
-    setCollectionPublic(value);
-    try {
-      const fd = new FormData();
-      fd.append('is_collection_public', value ? 'true' : 'false');
-      await api.patch('/users/me', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-    } catch {
-      setCollectionPublic(!value);
     }
   };
 
@@ -428,25 +413,6 @@ export default function ConfiguracionScreen({ navigation }) {
               </View>
             )}
           </TouchableOpacity>
-        </SectionCard>
-
-        {/* ── Colección ── */}
-        <SectionCard title="Colección" icon="grid-outline" color="#3b82f6">
-          <SettingRow
-            icon="earth-outline"
-            color="#3b82f6"
-            label="Colección pública"
-            description="Tus relojes serán visibles para cualquier usuario del marketplace."
-            isLast
-            right={
-              <Switch
-                value={collectionPublic}
-                onValueChange={handleToggleCollection}
-                trackColor={{ false: colors.border, true: colors.primary + '90' }}
-                thumbColor={collectionPublic ? colors.primary : colors.textMuted}
-              />
-            }
-          />
         </SectionCard>
 
         {/* ── Wallet ── */}

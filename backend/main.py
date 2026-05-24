@@ -566,7 +566,6 @@ def get_user_me(current_user: models.User = Depends(get_current_user)):
 def update_user_me(
     full_name: str = Form(None),
     location: str = Form(None),
-    is_collection_public: str = Form(None),
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -574,8 +573,6 @@ def update_user_me(
         current_user.full_name = full_name.strip()
     if location is not None:
         current_user.location = location.strip() or None
-    if is_collection_public is not None:
-        current_user.is_collection_public = is_collection_public.lower() == 'true'
     db.commit()
     db.refresh(current_user)
     return current_user
