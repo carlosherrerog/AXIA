@@ -319,9 +319,9 @@ function FeesCard({ colors }) {
 
   const FEE_ROWS = [
     { key: 'platform',   label: 'Plataforma',  icon: 'storefront-outline', max: 10, color: '#8247e5' },
-    { key: 'royalty',    label: 'Regalía fabricante', icon: 'business-outline', max: 10, color: '#f59e0b' },
-    { key: 'watchmaker', label: 'Relojero',     icon: 'build-outline',      max: 5,  color: '#06b6d4' },
-    { key: 'deposit',    label: 'Depósito vendedor',  icon: 'shield-outline', max: 5,  color: '#10b981' },
+    { key: 'royalty',    label: 'Regalía',     icon: 'business-outline',   max: 10, color: '#f59e0b' },
+    { key: 'watchmaker', label: 'Relojero',    icon: 'build-outline',      max: 5,  color: '#06b6d4' },
+    { key: 'deposit',    label: 'Depósito P2P', icon: 'shield-outline',    max: 5,  color: '#10b981' },
   ];
 
   return (
@@ -332,77 +332,67 @@ function FeesCard({ colors }) {
       {/* Header */}
       <View style={{
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        paddingHorizontal: 16, paddingVertical: 14,
+        paddingHorizontal: 14, paddingVertical: 11,
         borderBottomWidth: 1, borderBottomColor: colors.border,
       }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <View style={{
-            width: 32, height: 32, borderRadius: 10,
-            backgroundColor: 'rgba(130,71,229,0.12)',
-            alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Ionicons name="cash-outline" size={16} color="#8247e5" />
-          </View>
-          <View>
-            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Comisiones</Text>
-            <Text style={{ color: colors.textMuted, fontSize: 11 }}>Configuración del smart contract</Text>
-          </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+          <Ionicons name="cash-outline" size={14} color="#8247e5" />
+          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>Comisiones</Text>
         </View>
         {!loading && (
-          <TouchableOpacity
-            onPress={() => editing ? handleSaveFees() : setEditing(true)}
-            disabled={saving}
-            style={{
-              flexDirection: 'row', alignItems: 'center', gap: 5,
-              paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
-              backgroundColor: editing ? 'rgba(16,185,129,0.1)' : 'rgba(130,71,229,0.1)',
-              borderWidth: 1,
-              borderColor: editing ? 'rgba(16,185,129,0.25)' : 'rgba(130,71,229,0.25)',
-            }}
-          >
-            {saving
-              ? <ActivityIndicator size="small" color="#10b981" />
-              : <Ionicons name={editing ? 'checkmark' : 'pencil-outline'} size={13}
-                  color={editing ? '#10b981' : '#8247e5'} />
-            }
-            <Text style={{
-              fontSize: 12, fontWeight: '700',
-              color: editing ? '#10b981' : '#8247e5',
-            }}>
-              {editing ? 'Guardar' : 'Editar'}
-            </Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            {editing && (
+              <TouchableOpacity
+                onPress={() => { setEditing(false); setDraft({ platform: toPct(fees.platform), royalty: toPct(fees.royalty), watchmaker: toPct(fees.watchmaker), deposit: toPct(fees.deposit) }); }}
+                style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: 7, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
+              >
+                <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '600' }}>Cancelar</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() => editing ? handleSaveFees() : setEditing(true)}
+              disabled={saving}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 4,
+                paddingHorizontal: 9, paddingVertical: 5, borderRadius: 7,
+                backgroundColor: editing ? 'rgba(16,185,129,0.1)' : 'rgba(130,71,229,0.1)',
+                borderWidth: 1, borderColor: editing ? 'rgba(16,185,129,0.25)' : 'rgba(130,71,229,0.25)',
+              }}
+            >
+              {saving
+                ? <ActivityIndicator size="small" color="#10b981" />
+                : <Ionicons name={editing ? 'checkmark' : 'pencil-outline'} size={12} color={editing ? '#10b981' : '#8247e5'} />
+              }
+              <Text style={{ fontSize: 11, fontWeight: '700', color: editing ? '#10b981' : '#8247e5' }}>
+                {editing ? 'Guardar' : 'Editar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
       {/* Filas de comisiones */}
-      <View style={{ padding: 14, gap: 10 }}>
+      <View style={{ paddingHorizontal: 12, paddingVertical: 10, gap: 6 }}>
         {loading ? (
-          <ActivityIndicator color={colors.primary} style={{ marginVertical: 16 }} />
+          <ActivityIndicator color={colors.primary} style={{ marginVertical: 10 }} />
         ) : (
           FEE_ROWS.map(row => (
             <View key={row.key} style={{
               flexDirection: 'row', alignItems: 'center',
-              backgroundColor: colors.surface, borderRadius: 10,
-              paddingHorizontal: 12, paddingVertical: 10,
-              borderWidth: 1, borderColor: colors.border, gap: 10,
+              paddingHorizontal: 10, paddingVertical: 7,
+              backgroundColor: colors.surface, borderRadius: 9,
+              borderWidth: 1, borderColor: colors.border, gap: 8,
             }}>
-              <View style={{
-                width: 28, height: 28, borderRadius: 8,
-                backgroundColor: `${row.color}15`,
-                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
-                <Ionicons name={row.icon} size={13} color={row.color} />
-              </View>
-              <Text style={{ flex: 1, color: colors.textSecondary, fontSize: 12, fontWeight: '500' }}>
+              <Ionicons name={row.icon} size={12} color={row.color} />
+              <Text style={{ flex: 1, color: colors.textSecondary, fontSize: 12 }}>
                 {row.label}
               </Text>
               {editing ? (
                 <View style={{
                   flexDirection: 'row', alignItems: 'center',
                   borderWidth: 1, borderColor: `${row.color}40`,
-                  borderRadius: 7, backgroundColor: `${row.color}08`,
-                  paddingHorizontal: 8, paddingVertical: 5, minWidth: 70,
+                  borderRadius: 6, backgroundColor: `${row.color}08`,
+                  paddingHorizontal: 7, paddingVertical: 3,
                 }}>
                   <TextInputNative
                     value={String(draft[row.key] ?? '')}
@@ -410,22 +400,19 @@ function FeesCard({ colors }) {
                     keyboardType="decimal-pad"
                     selectTextOnFocus
                     style={{
-                      color: row.color, fontWeight: '700', fontSize: 14,
-                      minWidth: 36, textAlign: 'right',
+                      color: row.color, fontWeight: '700', fontSize: 13,
+                      width: 38, textAlign: 'right',
                       ...(Platform.OS === 'web' && { outlineStyle: 'none' }),
                     }}
                   />
-                  <Text style={{ color: colors.textMuted, fontSize: 13, marginLeft: 2 }}>%</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>%</Text>
                 </View>
               ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 2 }}>
-                  <Text style={{ color: row.color, fontWeight: '800', fontSize: 18 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 1 }}>
+                  <Text style={{ color: row.color, fontWeight: '800', fontSize: 15 }}>
                     {fees ? toPct(fees[row.key]) : '—'}
                   </Text>
-                  <Text style={{ color: colors.textMuted, fontSize: 11 }}>%</Text>
-                  <Text style={{ color: colors.textMuted, fontSize: 10, marginLeft: 4 }}>
-                    (máx {row.max}%)
-                  </Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 10 }}>%</Text>
                 </View>
               )}
             </View>
@@ -435,56 +422,44 @@ function FeesCard({ colors }) {
         {/* Alerta inline */}
         {alert && (
           <View style={{
-            flexDirection: 'row', alignItems: 'center', gap: 8,
+            flexDirection: 'row', alignItems: 'center', gap: 7,
             backgroundColor: alert.type === 'success' ? 'rgba(16,185,129,0.08)' : 'rgba(244,63,94,0.08)',
-            borderRadius: 8, padding: 10,
-            borderWidth: 1,
-            borderColor: alert.type === 'success' ? 'rgba(16,185,129,0.25)' : 'rgba(244,63,94,0.25)',
+            borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8,
+            borderWidth: 1, borderColor: alert.type === 'success' ? 'rgba(16,185,129,0.25)' : 'rgba(244,63,94,0.25)',
           }}>
             <Ionicons
               name={alert.type === 'success' ? 'checkmark-circle-outline' : 'alert-circle-outline'}
-              size={14} color={alert.type === 'success' ? '#10b981' : '#f43f5e'}
+              size={13} color={alert.type === 'success' ? '#10b981' : '#f43f5e'}
             />
-            <Text style={{
-              flex: 1, fontSize: 12,
-              color: alert.type === 'success' ? '#10b981' : '#f43f5e',
-            }}>{alert.msg}</Text>
+            <Text style={{ flex: 1, fontSize: 11, color: alert.type === 'success' ? '#10b981' : '#f43f5e' }}>
+              {alert.msg}
+            </Text>
             <TouchableOpacity onPress={() => setAlert(null)}>
-              <Ionicons name="close" size={13} color={colors.textMuted} />
+              <Ionicons name="close" size={12} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
-        )}
-
-        {/* Cancelar edición */}
-        {editing && (
-          <TouchableOpacity
-            onPress={() => { setEditing(false); setDraft({ platform: toPct(fees.platform), royalty: toPct(fees.royalty), watchmaker: toPct(fees.watchmaker), deposit: toPct(fees.deposit) }); }}
-            style={{ alignItems: 'center', paddingVertical: 6 }}
-          >
-            <Text style={{ color: colors.textMuted, fontSize: 12 }}>Cancelar</Text>
-          </TouchableOpacity>
         )}
 
         {/* Wallet destinataria */}
         {!loading && fees && (
           <View style={{
-            backgroundColor: colors.surface, borderRadius: 10,
+            backgroundColor: colors.surface, borderRadius: 9,
             borderWidth: 1, borderColor: colors.border,
-            paddingHorizontal: 12, paddingVertical: 10, gap: 6,
+            paddingHorizontal: 10, paddingVertical: 8, gap: 5,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 0.5 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 9, fontWeight: '700', letterSpacing: 0.6 }}>
                 WALLET DESTINATARIA
               </Text>
               <TouchableOpacity onPress={() => setEditRecipient(r => !r)}>
-                <Ionicons name={editRecipient ? 'close' : 'pencil-outline'} size={13} color={colors.textMuted} />
+                <Ionicons name={editRecipient ? 'close' : 'pencil-outline'} size={12} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
             {editRecipient ? (
-              <View style={{ gap: 8 }}>
+              <View style={{ gap: 7 }}>
                 <View style={{
                   borderWidth: 1, borderColor: 'rgba(130,71,229,0.3)',
-                  borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7,
+                  borderRadius: 7, paddingHorizontal: 9, paddingVertical: 6,
                   backgroundColor: 'rgba(130,71,229,0.05)',
                 }}>
                   <TextInputNative
@@ -493,24 +468,23 @@ function FeesCard({ colors }) {
                     placeholder="0x..."
                     placeholderTextColor={colors.textMuted}
                     style={{
-                      color: colors.text, fontSize: 11,
+                      color: colors.text, fontSize: 10,
                       fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
                       ...(Platform.OS === 'web' && { outlineStyle: 'none' }),
                     }}
                   />
                 </View>
                 <TouchableOpacity
-                  onPress={handleSaveRecipient}
-                  disabled={saving}
+                  onPress={handleSaveRecipient} disabled={saving}
                   style={{
-                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 8,
-                    paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)',
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+                    backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 7,
+                    paddingVertical: 7, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)',
                   }}
                 >
                   {saving
                     ? <ActivityIndicator size="small" color="#10b981" />
-                    : <Ionicons name="checkmark" size={14} color="#10b981" />
+                    : <Ionicons name="checkmark" size={13} color="#10b981" />
                   }
                   <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 12 }}>Confirmar</Text>
                 </TouchableOpacity>
