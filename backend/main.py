@@ -566,6 +566,7 @@ def get_user_me(current_user: models.User = Depends(get_current_user)):
 def update_user_me(
     full_name: str = Form(None),
     location: str = Form(None),
+    is_collection_public: str = Form(None),
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -573,9 +574,25 @@ def update_user_me(
         current_user.full_name = full_name.strip()
     if location is not None:
         current_user.location = location.strip() or None
+    if is_collection_public is not None:
+        current_user.is_collection_public = is_collection_public.lower() == 'true'
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@app.delete("/users/me", status_code=204)
+def delete_account(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    current_user.is_active = False
+    current_user.full_name = f"Usuario eliminado"
+    current_user.location = None
+    current_user.wallet_address = None
+    current_user.requested_role = None
+    current_user.request_message = None
+    db.commit()
 
 
 @app.post("/users/me/change-password")

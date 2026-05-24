@@ -25,6 +25,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     is_active: Mapped[bool] = mapped_column(default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_collection_public: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # RELACIONES
     owned_watches: Mapped[List["Watch"]] = relationship(back_populates="owner")
