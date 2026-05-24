@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, TouchableOpacity, Platform, useWindowDimensions,
+  View, Text, TouchableOpacity, Platform, useWindowDimensions, Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ethers } from 'ethers';
@@ -210,38 +210,53 @@ export default function UserInfo({ loggedUser, showAlert, stats, onSettings }) {
           paddingTop: 14,
           paddingBottom: 16,
         }}>
-          {/* Dirección */}
-          <TouchableOpacity
-            onPress={handleCopy}
-            activeOpacity={0.7}
-            style={{
-              flexDirection: 'row', alignItems: 'center', gap: 8,
-              backgroundColor: colors.surface,
-              borderRadius: 10,
-              paddingHorizontal: 12, paddingVertical: 9,
-              borderWidth: 1, borderColor: colors.border,
-              marginBottom: 14,
-            }}
-          >
-            <Ionicons name="wallet-outline" size={13} color={colors.textMuted} />
-            <Text
-              numberOfLines={1}
+          {/* Dirección + enlace Polygonscan */}
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+            <TouchableOpacity
+              onPress={handleCopy}
+              activeOpacity={0.7}
               style={{
-                flex: 1,
-                color: colors.textSecondary,
-                fontSize: 10,
-                fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-                letterSpacing: 0.5,
+                flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
+                backgroundColor: colors.surface,
+                borderRadius: 10,
+                paddingHorizontal: 12, paddingVertical: 9,
+                borderWidth: 1, borderColor: colors.border,
               }}
             >
-              {addr}
-            </Text>
-            <Ionicons
-              name={copied ? 'checkmark' : 'copy-outline'}
-              size={13}
-              color={copied ? USDC_GREEN : colors.textMuted}
-            />
-          </TouchableOpacity>
+              <Ionicons name="wallet-outline" size={13} color={colors.textMuted} />
+              <Text
+                numberOfLines={1}
+                style={{
+                  flex: 1,
+                  color: colors.textSecondary,
+                  fontSize: 10,
+                  fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                  letterSpacing: 0.5,
+                }}
+              >
+                {addr}
+              </Text>
+              <Ionicons
+                name={copied ? 'checkmark' : 'copy-outline'}
+                size={13}
+                color={copied ? USDC_GREEN : colors.textMuted}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => Linking.openURL(`https://amoy.polygonscan.com/address/${addr}`)}
+              activeOpacity={0.7}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 5,
+                backgroundColor: '#8b5cf612',
+                borderRadius: 10, borderWidth: 1, borderColor: '#8b5cf630',
+                paddingHorizontal: 10, paddingVertical: 9,
+              }}
+            >
+              <Ionicons name="open-outline" size={13} color="#8b5cf6" />
+              <Text style={{ color: '#8b5cf6', fontSize: 11, fontWeight: '700' }}>Polygonscan</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Saldos */}
           <View style={{ flexDirection: 'row', gap: 10 }}>
