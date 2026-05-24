@@ -198,30 +198,29 @@ export default function AuctionsScreen({ navigation }) {
           </View>
         }
         ListEmptyComponent={
-          <View>
-            {/* Tarjeta vacía */}
+          <View style={{
+            padding: 28, marginBottom: 20,
+            backgroundColor: colors.backgroundAlt,
+            borderRadius: 16, borderWidth: 1, borderColor: colors.border,
+            alignItems: 'center',
+          }}>
             <View style={{
-              padding: 28, marginBottom: 20,
-              backgroundColor: colors.backgroundAlt,
-              borderRadius: 16, borderWidth: 1, borderColor: colors.border,
-              alignItems: 'center',
+              width: 60, height: 60, borderRadius: 30,
+              backgroundColor: colors.primary + '15', borderWidth: 1, borderColor: colors.primary + '30',
+              alignItems: 'center', justifyContent: 'center', marginBottom: 14,
             }}>
-              <View style={{
-                width: 60, height: 60, borderRadius: 30,
-                backgroundColor: colors.primary + '15', borderWidth: 1, borderColor: colors.primary + '30',
-                alignItems: 'center', justifyContent: 'center', marginBottom: 14,
-              }}>
-                <Ionicons name="hammer-outline" size={26} color={colors.primary} />
-              </View>
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16, marginBottom: 6 }}>
-                No hay subastas activas
-              </Text>
-              <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center', lineHeight: 20 }}>
-                Cuando un Dealer publique una subasta aparecerá aquí en tiempo real.
-              </Text>
+              <Ionicons name="hammer-outline" size={26} color={colors.primary} />
             </View>
-
-            {/* Cómo funcionan las subastas */}
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16, marginBottom: 6 }}>
+              No hay subastas activas
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center', lineHeight: 20 }}>
+              Cuando un Dealer publique una subasta aparecerá aquí en tiempo real.
+            </Text>
+          </View>
+        }
+        ListFooterComponent={
+          <View style={{ paddingTop: 24, paddingBottom: 10 }}>
             <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>
               Cómo funcionan las subastas
             </Text>

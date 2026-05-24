@@ -409,7 +409,7 @@ export function MarketplaceWatchSection({ watches, navigation }) {
         )}
         ListEmptyComponent={
           hasActiveFilters && watches.length > 0 ? (
-            /* Estado vacío — sin resultados para los filtros activos */
+            /* Sin resultados para los filtros activos */
             <View style={{ alignItems: 'center', paddingVertical: 60, paddingHorizontal: 20 }}>
               <View style={{
                 width: 60, height: 60, borderRadius: 30,
@@ -438,54 +438,55 @@ export function MarketplaceWatchSection({ watches, navigation }) {
               </TouchableOpacity>
             </View>
           ) : (
-            /* Estado vacío — marketplace sin listados */
-            <View style={{ paddingTop: 10 }}>
+            /* Marketplace vacío */
+            <View style={{
+              marginBottom: 20, padding: 28,
+              backgroundColor: colors.backgroundAlt,
+              borderRadius: 16, borderWidth: 1, borderColor: colors.border,
+              alignItems: 'center',
+            }}>
               <View style={{
-                marginBottom: 20, padding: 28,
-                backgroundColor: colors.backgroundAlt,
-                borderRadius: 16, borderWidth: 1, borderColor: colors.border,
-                alignItems: 'center',
+                width: 60, height: 60, borderRadius: 30,
+                backgroundColor: colors.primary + '15', borderWidth: 1, borderColor: colors.primary + '30',
+                alignItems: 'center', justifyContent: 'center', marginBottom: 14,
               }}>
-                <View style={{
-                  width: 60, height: 60, borderRadius: 30,
-                  backgroundColor: colors.primary + '15', borderWidth: 1, borderColor: colors.primary + '30',
-                  alignItems: 'center', justifyContent: 'center', marginBottom: 14,
-                }}>
-                  <Ionicons name="storefront-outline" size={26} color={colors.primary} />
-                </View>
-                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16, marginBottom: 6 }}>
-                  El marketplace está vacío por ahora
-                </Text>
-                <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center', lineHeight: 20 }}>
-                  Los primeros relojes certificados en blockchain aparecerán aquí.
-                </Text>
+                <Ionicons name="storefront-outline" size={26} color={colors.primary} />
               </View>
-
-              <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>
-                Cómo funciona AXIA
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16, marginBottom: 6 }}>
+                El marketplace está vacío por ahora
               </Text>
-              {HOW_IT_WORKS.map(step => (
-                <View key={step.title} style={{
-                  flexDirection: 'row', alignItems: 'flex-start', gap: 14,
-                  backgroundColor: colors.backgroundAlt,
-                  borderRadius: 12, borderWidth: 1, borderColor: colors.border,
-                  padding: 16, marginBottom: 10,
-                }}>
-                  <View style={{
-                    width: 36, height: 36, borderRadius: 10,
-                    backgroundColor: step.color + '18', borderWidth: 1, borderColor: step.color + '35',
-                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  }}>
-                    <Ionicons name={step.icon} size={17} color={step.color} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginBottom: 3 }}>{step.title}</Text>
-                    <Text style={{ color: colors.textMuted, fontSize: 12, lineHeight: 18 }}>{step.desc}</Text>
-                  </View>
-                </View>
-              ))}
+              <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center', lineHeight: 20 }}>
+                Los primeros relojes certificados en blockchain aparecerán aquí.
+              </Text>
             </View>
           )
+        }
+        ListFooterComponent={
+          <View style={{ paddingTop: 24, paddingBottom: 10 }}>
+            <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>
+              Cómo funciona AXIA
+            </Text>
+            {HOW_IT_WORKS.map(step => (
+              <View key={step.title} style={{
+                flexDirection: 'row', alignItems: 'flex-start', gap: 14,
+                backgroundColor: colors.backgroundAlt,
+                borderRadius: 12, borderWidth: 1, borderColor: colors.border,
+                padding: 16, marginBottom: 10,
+              }}>
+                <View style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  backgroundColor: step.color + '18', borderWidth: 1, borderColor: step.color + '35',
+                  alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                  <Ionicons name={step.icon} size={17} color={step.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginBottom: 3 }}>{step.title}</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, lineHeight: 18 }}>{step.desc}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
         }
       />
     </View>
