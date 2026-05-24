@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  ActivityIndicator, Platform,
+  ActivityIndicator, Platform, Switch, Linking, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as SecureStore from 'expo-secure-store';
+import { CommonActions } from '@react-navigation/native';
 import api from '../api/api';
 import GlobalHeader from '../components/GlobalHeader';
 import AlertModal, { useAlert } from '../components/AlertModal';
 import { useTheme } from '../context/ThemeContext';
 import { roleColors } from '../themes/styles';
+
+// ── Componentes locales ─────────────────────────────────────────────────────
 
 function SectionCard({ title, icon, color, children }) {
   const { colors } = useTheme();
@@ -36,38 +40,79 @@ function SectionCard({ title, icon, color, children }) {
   );
 }
 
+function SettingRow({ icon, color, label, description, onPress, right, danger, isLast }) {
+  const { colors } = useTheme();
+  const textColor  = danger ? '#ef4444' : colors.text;
+  const iconColor  = danger ? '#ef4444' : (color || colors.textSecondary);
+  const Wrapper    = onPress ? TouchableOpacity : View;
+
+  return (
+    <Wrapper
+      onPress={onPress}
+      activeOpacity={0.7}
+      style={{
+        flexDirection: 'row', alignItems: 'center', gap: 12,
+        paddingVertical: 13,
+        borderBottomWidth: isLast ? 0 : 1,
+        borderBottomColor: colors.border,
+      }}
+    >
+      {icon ? (
+        <View style={{
+          width: 34, height: 34, borderRadius: 10,
+          backgroundColor: iconColor + '15', borderWidth: 1, borderColor: iconColor + '30',
+          alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}>
+          <Ionicons name={icon} size={16} color={iconColor} />
+        </View>
+      ) : null}
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: textColor, fontWeight: '600', fontSize: 14 }}>{label}</Text>
+        {description ? (
+          <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2, lineHeight: 16 }}>
+            {description}
+          </Text>
+        ) : null}
+      </View>
+      {right !== undefined
+        ? right
+        : onPress
+          ? <Ionicons name="chevron-forward" size={16} color={danger ? '#ef4444' : colors.textMuted} />
+          : null}
+    </Wrapper>
+  );
+}
+
+// ── Pantalla ────────────────────────────────────────────────────────────────
+
 export default function ConfiguracionScreen({ navigation }) {
   const { colors } = useTheme();
   const { alertProps, showAlert } = useAlert();
 
-  const [loggedUser, setLoggedUser] = useState(null);
-  const [loading, setLoading]       = useState(true);
-  const [savingProfile, setSavingProfile] = useState(false);
+  const [loggedUser, setLoggedUser]         = useState(null);
+  const [loading, setLoading]               = useState(true);
+  const [savingProfile, setSavingProfile]   = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [requestingRole, setRequestingRole] = useState(false);
 
-  const [form, setForm] = useState({
-    full_name: '',
-    location: '',
-  });
-
-  const [passForm, setPassForm] = useState({
-    current: '',
-    next: '',
-    confirm: '',
-  });
+  const [form, setForm]         = useState({ full_name: '', location: '' });
+  const [passForm, setPassForm] = useState({ current: '', next: '', confirm: '' });
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNext, setShowNext]       = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  const [collectionPublic, setCollectionPublic] = useState(false);
+  const [confirmDialog, setConfirmDialog]       = useState(null);
+  const [roleModal, setRoleModal]               = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
         const res = await api.get('/users/me');
         setLoggedUser(res.data);
-        setForm({
-          full_name: res.data.full_name || '',
-          location:  res.data.location  || '',
-        });
+        setForm({ full_name: res.data.full_name || '', location: res.data.location || '' });
+        setCollectionPublic(res.data.is_collection_public || false);
       } catch (e) {
         console.error('Error cargando perfil:', e);
       } finally {
@@ -75,6 +120,8 @@ export default function ConfiguracionScreen({ navigation }) {
       }
     })();
   }, []);
+
+  // ── Perfil ──────────────────────────────────────────────────────────────
 
   const handleSaveProfile = async () => {
     try {
@@ -86,7 +133,7 @@ export default function ConfiguracionScreen({ navigation }) {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setLoggedUser(res.data);
-      showAlert('Guardado', 'Tu perfil se ha actualizado correctamente.', 'success');
+      showAlert('Guardado', 'Tu perfil se ha actualizado.', 'success');
     } catch (e) {
       showAlert('Error', e.response?.data?.detail || 'No se pudo guardar el perfil.', 'error');
     } finally {
@@ -94,16 +141,12 @@ export default function ConfiguracionScreen({ navigation }) {
     }
   };
 
+  // ── Contraseña ──────────────────────────────────────────────────────────
+
   const handleChangePassword = async () => {
-    if (!passForm.current) {
-      showAlert('Error', 'Introduce tu contraseña actual.', 'warning'); return;
-    }
-    if (passForm.next.length < 6) {
-      showAlert('Error', 'La nueva contraseña debe tener al menos 6 caracteres.', 'warning'); return;
-    }
-    if (passForm.next !== passForm.confirm) {
-      showAlert('Error', 'Las contraseñas nuevas no coinciden.', 'warning'); return;
-    }
+    if (!passForm.current) { showAlert('Error', 'Introduce tu contraseña actual.', 'warning'); return; }
+    if (passForm.next.length < 6) { showAlert('Error', 'La nueva contraseña debe tener al menos 6 caracteres.', 'warning'); return; }
+    if (passForm.next !== passForm.confirm) { showAlert('Error', 'Las contraseñas nuevas no coinciden.', 'warning'); return; }
     try {
       setSavingPassword(true);
       await api.post('/users/me/change-password', {
@@ -119,6 +162,65 @@ export default function ConfiguracionScreen({ navigation }) {
     }
   };
 
+  // ── Colección pública ───────────────────────────────────────────────────
+
+  const handleToggleCollection = async (value) => {
+    setCollectionPublic(value);
+    try {
+      const fd = new FormData();
+      fd.append('is_collection_public', value ? 'true' : 'false');
+      await api.patch('/users/me', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+    } catch {
+      setCollectionPublic(!value);
+    }
+  };
+
+  // ── Solicitar rol ───────────────────────────────────────────────────────
+
+  const handleRequestRole = async (role) => {
+    try {
+      setRequestingRole(true);
+      await api.post('/users/request-role', { role, message: 'Solicitud enviada desde la app.' });
+      setRoleModal(false);
+      showAlert('Solicitud enviada', `Tu solicitud para el rol ${role} ha sido enviada. Un administrador la revisará pronto.`, 'success');
+    } catch (e) {
+      showAlert('Error', e.response?.data?.detail || 'No se pudo enviar la solicitud.', 'error');
+    } finally {
+      setRequestingRole(false);
+    }
+  };
+
+  // ── Cerrar sesión ───────────────────────────────────────────────────────
+
+  const handleLogout = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        localStorage.removeItem('userToken');
+        localStorage.removeItem('userData');
+        localStorage.removeItem('refreshToken');
+      } else {
+        await SecureStore.deleteItemAsync('userToken');
+        await SecureStore.deleteItemAsync('userData');
+      }
+    } catch {}
+    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Login' }] }));
+  };
+
+  // ── Eliminar cuenta ─────────────────────────────────────────────────────
+
+  const handleDeleteAccount = async () => {
+    try {
+      setDeletingAccount(true);
+      await api.delete('/users/me');
+      await handleLogout();
+    } catch (e) {
+      showAlert('Error', e.response?.data?.detail || 'No se pudo eliminar la cuenta. Inténtalo más tarde.', 'error');
+      setDeletingAccount(false);
+    }
+  };
+
+  // ── Render ──────────────────────────────────────────────────────────────
+
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
@@ -128,29 +230,22 @@ export default function ConfiguracionScreen({ navigation }) {
   }
 
   const inputStyle = {
-    backgroundColor: colors.surface,
-    color: colors.text,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surface, color: colors.text,
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 15, borderWidth: 1, borderColor: colors.border,
     ...(Platform.OS === 'web' && { outlineStyle: 'none' }),
   };
 
   const labelStyle = {
-    color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    marginBottom: 7,
-    textTransform: 'uppercase',
+    color: colors.textSecondary, fontSize: 11, fontWeight: '700',
+    letterSpacing: 0.8, marginBottom: 7, textTransform: 'uppercase',
   };
 
   const readonlyInput = [inputStyle, { backgroundColor: colors.surface + '60', color: colors.textMuted }];
-
   const initials = (loggedUser?.username?.[0] || '?').toUpperCase();
+  const hasWallet = !!loggedUser?.wallet_address;
+  const userRoles = loggedUser?.roles || [];
+  const availableRoles = ['DEALER', 'RELOJERO', 'FABRICANTE'].filter(r => !userRoles.includes(r));
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -167,7 +262,11 @@ export default function ConfiguracionScreen({ navigation }) {
           onPress={() => navigation.goBack()}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 24, alignSelf: 'flex-start' }}
         >
-          <View style={{ backgroundColor: colors.surface, borderRadius: 10, padding: 8, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <View style={{
+            backgroundColor: colors.surface, borderRadius: 10, padding: 8,
+            borderWidth: 1, borderColor: colors.border,
+            flexDirection: 'row', alignItems: 'center', gap: 6,
+          }}>
             <Ionicons name="arrow-back" size={16} color={colors.textSecondary} />
             <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: '600' }}>Volver</Text>
           </View>
@@ -175,10 +274,10 @@ export default function ConfiguracionScreen({ navigation }) {
 
         <Text style={{ color: colors.text, fontSize: 22, fontWeight: '800', marginBottom: 4 }}>Configuración</Text>
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 24 }}>
-          Gestiona tu perfil y la seguridad de tu cuenta.
+          Gestiona tu cuenta y preferencias.
         </Text>
 
-        {/* Tarjeta resumen de cuenta */}
+        {/* Resumen de cuenta */}
         <View style={{
           backgroundColor: colors.backgroundAlt,
           borderRadius: 16, borderWidth: 1, borderColor: colors.border,
@@ -200,9 +299,9 @@ export default function ConfiguracionScreen({ navigation }) {
             <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>
               {loggedUser?.email}
             </Text>
-            {loggedUser?.roles?.length > 0 && (
+            {userRoles.length > 0 && (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
-                {loggedUser.roles.map(role => {
+                {userRoles.map(role => {
                   const rc = roleColors[role] || colors.primary;
                   return (
                     <View key={role} style={{
@@ -219,9 +318,8 @@ export default function ConfiguracionScreen({ navigation }) {
           </View>
         </View>
 
-        {/* ── SECCIÓN 1: Datos personales ── */}
+        {/* ── Datos personales ── */}
         <SectionCard title="Datos personales" icon="person-circle-outline" color={colors.primary}>
-
           <Text style={labelStyle}>Nombre de usuario</Text>
           <View style={[readonlyInput, { marginBottom: 5, justifyContent: 'center' }]}>
             <Text style={{ color: colors.textMuted, fontSize: 15 }}>{loggedUser?.username}</Text>
@@ -261,26 +359,22 @@ export default function ConfiguracionScreen({ navigation }) {
             onPress={handleSaveProfile}
             disabled={savingProfile}
             style={{
-              marginTop: 8,
-              backgroundColor: colors.primary,
+              marginTop: 8, backgroundColor: colors.primary,
               borderRadius: 12, paddingVertical: 13,
               alignItems: 'center', opacity: savingProfile ? 0.7 : 1,
             }}
           >
-            {savingProfile
-              ? <ActivityIndicator color="#fff" />
-              : (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="checkmark-circle-outline" size={17} color="#fff" />
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Guardar perfil</Text>
-                </View>
-              )}
+            {savingProfile ? <ActivityIndicator color="#fff" /> : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="checkmark-circle-outline" size={17} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Guardar perfil</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </SectionCard>
 
-        {/* ── SECCIÓN 2: Contraseña ── */}
+        {/* ── Seguridad ── */}
         <SectionCard title="Cambiar contraseña" icon="lock-closed-outline" color="#f59e0b">
-
           {[
             { label: 'Contraseña actual', key: 'current', show: showCurrent, setShow: setShowCurrent },
             { label: 'Nueva contraseña',  key: 'next',    show: showNext,    setShow: setShowNext    },
@@ -323,23 +417,203 @@ export default function ConfiguracionScreen({ navigation }) {
             onPress={handleChangePassword}
             disabled={savingPassword}
             style={{
-              backgroundColor: '#f59e0b',
-              borderRadius: 12, paddingVertical: 13,
+              backgroundColor: '#f59e0b', borderRadius: 12, paddingVertical: 13,
               alignItems: 'center', opacity: savingPassword ? 0.7 : 1,
             }}
           >
-            {savingPassword
-              ? <ActivityIndicator color="#fff" />
-              : (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="lock-closed-outline" size={17} color="#fff" />
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Actualizar contraseña</Text>
-                </View>
-              )}
+            {savingPassword ? <ActivityIndicator color="#fff" /> : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="lock-closed-outline" size={17} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Actualizar contraseña</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </SectionCard>
 
+        {/* ── Colección ── */}
+        <SectionCard title="Colección" icon="grid-outline" color="#3b82f6">
+          <SettingRow
+            icon="earth-outline"
+            color="#3b82f6"
+            label="Colección pública"
+            description="Tus relojes serán visibles para cualquier usuario del marketplace."
+            isLast
+            right={
+              <Switch
+                value={collectionPublic}
+                onValueChange={handleToggleCollection}
+                trackColor={{ false: colors.border, true: colors.primary + '90' }}
+                thumbColor={collectionPublic ? colors.primary : colors.textMuted}
+              />
+            }
+          />
+        </SectionCard>
+
+        {/* ── Wallet ── */}
+        <SectionCard title="Wallet" icon="wallet-outline" color="#10b981">
+          {hasWallet ? (
+            <SettingRow
+              icon="checkmark-circle-outline"
+              color="#10b981"
+              label="MetaMask conectada"
+              description={loggedUser.wallet_address}
+              isLast
+            />
+          ) : (
+            <>
+              <View style={{
+                flexDirection: 'row', gap: 10, alignItems: 'flex-start',
+                backgroundColor: '#f59e0b10', borderRadius: 12,
+                borderWidth: 1, borderColor: '#f59e0b30',
+                padding: 14, marginBottom: 12,
+              }}>
+                <Ionicons name="information-circle-outline" size={17} color="#f59e0b" style={{ marginTop: 1 }} />
+                <Text style={{ color: colors.textSecondary, fontSize: 13, flex: 1, lineHeight: 19 }}>
+                  Sin wallet no podrás comprar, vender ni pujar en subastas. Los relojes están vinculados a wallets en la blockchain de Polygon.
+                </Text>
+              </View>
+              <SettingRow
+                icon="open-outline"
+                color="#10b981"
+                label="Descargar MetaMask"
+                description="Obtén la wallet oficial para interactuar con la blockchain."
+                isLast
+                onPress={() => Linking.openURL('https://metamask.io/download/')}
+              />
+            </>
+          )}
+        </SectionCard>
+
+        {/* ── Rol profesional (solo si hay roles disponibles) ── */}
+        {availableRoles.length > 0 && (
+          <SectionCard title="Rol profesional" icon="briefcase-outline" color="#8b5cf6">
+            <SettingRow
+              icon="add-circle-outline"
+              color="#8b5cf6"
+              label="Solicitar rol"
+              description="Accede a funciones avanzadas: Dealer, Relojero o Fabricante."
+              isLast
+              onPress={() => setRoleModal(true)}
+            />
+          </SectionCard>
+        )}
+
+        {/* ── Sesión ── */}
+        <SectionCard title="Sesión" icon="power-outline" color="#ef4444">
+          <SettingRow
+            icon="log-out-outline"
+            color="#f59e0b"
+            label="Cerrar sesión"
+            description="Salir de tu cuenta en este dispositivo."
+            onPress={() => setConfirmDialog({
+              type: 'warning',
+              title: 'Cerrar sesión',
+              message: '¿Quieres cerrar tu sesión en este dispositivo?',
+              confirmLabel: 'Cerrar sesión',
+              onConfirm: handleLogout,
+            })}
+          />
+          <SettingRow
+            icon="trash-outline"
+            label="Eliminar cuenta"
+            description="Elimina permanentemente tu cuenta de AXIA."
+            danger
+            isLast
+            onPress={() => setConfirmDialog({
+              type: 'error',
+              title: 'Eliminar cuenta',
+              message:
+                '¿Estás seguro de que quieres eliminar tu cuenta?\n\n' +
+                '• Tus datos e historial en AXIA se eliminarán permanentemente.\n\n' +
+                '• Tus relojes seguirán vinculados a tu wallet en la blockchain de Polygon — siguen siendo tuyos.\n\n' +
+                '• Esta acción no se puede deshacer.',
+              confirmLabel: deletingAccount ? 'Eliminando...' : 'Sí, eliminar cuenta',
+              onConfirm: handleDeleteAccount,
+            })}
+          />
+        </SectionCard>
+
       </ScrollView>
+
+      {/* Modal solicitar rol */}
+      <Modal visible={roleModal} transparent animationType="fade">
+        <View style={{
+          flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center',
+          ...(Platform.OS === 'web' && { backdropFilter: 'blur(6px)' }),
+        }}>
+          <View style={{
+            backgroundColor: colors.backgroundAlt, borderRadius: 24, padding: 28,
+            width: '88%', maxWidth: 380, borderWidth: 1, borderColor: colors.border,
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <Ionicons name="briefcase-outline" size={20} color={colors.primary} />
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 17 }}>Solicitar rol</Text>
+            </View>
+            <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 20, lineHeight: 19 }}>
+              Selecciona el rol que deseas solicitar. Un administrador revisará tu solicitud y recibirás una notificación.
+            </Text>
+
+            {[
+              { role: 'DEALER',     icon: 'storefront-outline',  color: roleColors.DEALER,     desc: 'Compra y vende relojes, crea subastas.' },
+              { role: 'RELOJERO',   icon: 'build-outline',       color: roleColors.RELOJERO,   desc: 'Perita y certifica relojes en ventas P2P.' },
+              { role: 'FABRICANTE', icon: 'construct-outline',   color: roleColors.FABRICANTE, desc: 'Crea y autentifica relojes en blockchain.' },
+            ].filter(r => availableRoles.includes(r.role)).map(({ role, icon, color, desc }) => (
+              <TouchableOpacity
+                key={role}
+                onPress={() => !requestingRole && handleRequestRole(role)}
+                disabled={requestingRole}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 12,
+                  backgroundColor: colors.surface, borderRadius: 14,
+                  borderWidth: 1, borderColor: colors.border,
+                  padding: 14, marginBottom: 10,
+                  opacity: requestingRole ? 0.6 : 1,
+                }}
+              >
+                <View style={{
+                  width: 38, height: 38, borderRadius: 10,
+                  backgroundColor: color + '18', borderWidth: 1, borderColor: color + '40',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Ionicons name={icon} size={18} color={color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{role}</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>{desc}</Text>
+                </View>
+                {requestingRole
+                  ? <ActivityIndicator size="small" color={colors.primary} />
+                  : <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />}
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              onPress={() => setRoleModal(false)}
+              style={{
+                marginTop: 6, paddingVertical: 12, borderRadius: 12,
+                backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Diálogo de confirmación (cerrar sesión / eliminar cuenta) */}
+      {confirmDialog && (
+        <AlertModal
+          visible={true}
+          type={confirmDialog.type}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          onConfirm={() => { setConfirmDialog(null); confirmDialog.onConfirm(); }}
+          cancelLabel="Cancelar"
+          onCancel={() => setConfirmDialog(null)}
+        />
+      )}
 
       <AlertModal {...alertProps} />
     </View>
