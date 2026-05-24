@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   Animated, Platform, useWindowDimensions, Image, Linking,
@@ -6,6 +6,8 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import GlobalHeader from '../components/GlobalHeader';
+import api from '../api/api';
 
 // Tarjetas principales — contenido resumido, siempre visible
 const FEATURE_DATA = [
@@ -464,12 +466,17 @@ function AccordionSection({ section, isLast }) {
   );
 }
 
-export default function InfoScreen() {
+export default function InfoScreen({ navigation }) {
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
   const maxWidth  = Math.min(width, 820);
   const [emailCopied, setEmailCopied] = useState(false);
+  const [loggedUser, setLoggedUser]   = useState(null);
+
+  useEffect(() => {
+    api.get('/users/me').then(r => setLoggedUser(r.data)).catch(() => {});
+  }, []);
 
   const copyEmail = async () => {
     await Clipboard.setStringAsync('axiawatches@gmail.com');
@@ -479,6 +486,11 @@ export default function InfoScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <GlobalHeader
+        loggedUser={loggedUser}
+        navigation={navigation}
+        showBack={false}
+      />
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 100, alignItems: 'center' }}
         showsVerticalScrollIndicator={false}
