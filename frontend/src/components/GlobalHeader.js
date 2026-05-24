@@ -269,15 +269,10 @@ export default function GlobalHeader({
             </>
           ) : (
             <>
-              <Image
-                source={require('../../assets/axia-icons/axia-mark-purple-light.svg')}
-                style={{ width: 130, height: 40 }}
-                resizeMode="contain"
-              />
               {Platform.OS === 'web' ? (
                 <Image
                   source={require('../../assets/axia-icons/axia-wordmark-purple.svg')}
-                  style={{ width: 120, height: 40 }}
+                  style={{ width: 110, height: 36 }}
                   resizeMode="contain"
                 />
               ) : (
