@@ -58,9 +58,9 @@ export default function WatchSections({
   const listedNfts  = myNfts.filter(nft => nft.is_listed && !nft.is_buyer && !nft.is_auction);
 
   const tabs = [
-    { key: 'collection', label: isDealer ? 'Stock' : 'Mi Colección' },
-    { key: 'listed',     label: 'En Venta' },
-    ...(isParticular ? [{ key: 'bids', label: 'Subastas' }] : []),
+    { key: 'collection', label: isDealer ? 'Stock' : 'Mi Colección', count: myNfts.length },
+    { key: 'listed',     label: 'En Venta',                          count: listedNfts.length },
+    ...(isParticular ? [{ key: 'bids', label: 'Subastas', count: myBids?.length ?? 0 }] : []),
   ];
 
   return (
@@ -70,24 +70,40 @@ export default function WatchSections({
 
         {/* LADO IZQUIERDO: Pestañas */}
         <View style={{ flexDirection: 'row' }}>
-          {tabs.map((tab) => (
-            <TouchableOpacity
-              key={tab.key}
-              onPress={() => setActiveTab(tab.key)}
-              style={[
-                globalStyles.tabButton,
-                activeTab === tab.key && { borderBottomWidth: 2, borderBottomColor: colors.primary }
-              ]}
-            >
-              <Text style={[
-                globalStyles.tabText,
-                { color: activeTab === tab.key ? colors.primary : colors.textSecondary,
-                  fontWeight: activeTab === tab.key ? 'bold' : 'normal' }
-              ]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {tabs.map((tab) => {
+            const active = activeTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                onPress={() => setActiveTab(tab.key)}
+                style={[
+                  globalStyles.tabButton,
+                  active && { borderBottomWidth: 2, borderBottomColor: colors.primary }
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Text style={[
+                    globalStyles.tabText,
+                    { color: active ? colors.primary : colors.textSecondary,
+                      fontWeight: active ? 'bold' : 'normal' }
+                  ]}>
+                    {tab.label}
+                  </Text>
+                  {tab.count > 0 && (
+                    <View style={{
+                      backgroundColor: active ? colors.primary + '25' : colors.surface,
+                      borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1,
+                      borderWidth: 1, borderColor: active ? colors.primary + '50' : colors.border,
+                    }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: active ? colors.primary : colors.textMuted }}>
+                        {tab.count}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* LADO DERECHO: Refresh + Importar */}

@@ -22,7 +22,7 @@ const POL_GREEN  = '#4ade80';
 const fmt = (value, dec = 2) =>
   Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: dec });
 
-export default function UserInfo({ loggedUser, showAlert, stats }) {
+export default function UserInfo({ loggedUser, showAlert, stats, onSettings }) {
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
   const isWide = width >= 640;
@@ -147,21 +147,35 @@ export default function UserInfo({ loggedUser, showAlert, stats }) {
               ) : null}
             </View>
 
-            {/* Badge wallet conectada */}
-            {hasWallet ? (
-              <View style={{
-                flexDirection: 'row', alignItems: 'center', gap: 5,
-                backgroundColor: USDC_GREEN + '12',
-                borderWidth: 1, borderColor: USDC_GREEN + '35',
-                borderRadius: 20, paddingHorizontal: 9, paddingVertical: 5,
-                alignSelf: 'flex-start',
-              }}>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: USDC_GREEN }} />
-                <Text style={{ color: USDC_GREEN, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>
-                  WALLET ACTIVA
-                </Text>
-              </View>
-            ) : null}
+            {/* Badge wallet + botón configuración */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' }}>
+              {hasWallet ? (
+                <View style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 5,
+                  backgroundColor: USDC_GREEN + '12',
+                  borderWidth: 1, borderColor: USDC_GREEN + '35',
+                  borderRadius: 20, paddingHorizontal: 9, paddingVertical: 5,
+                }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: USDC_GREEN }} />
+                  <Text style={{ color: USDC_GREEN, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>
+                    WALLET ACTIVA
+                  </Text>
+                </View>
+              ) : null}
+              {onSettings ? (
+                <TouchableOpacity
+                  onPress={onSettings}
+                  style={{
+                    width: 30, height: 30, borderRadius: 15,
+                    backgroundColor: colors.surface,
+                    borderWidth: 1, borderColor: colors.border,
+                    alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="settings-outline" size={15} color={colors.textSecondary} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
           </View>
 
           {/* Badges de rol */}
