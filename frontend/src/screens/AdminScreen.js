@@ -895,7 +895,7 @@ function ContractsPanel({ colors }) {
         <View style={{ flex: 1 }}>
           <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Contratos desplegados</Text>
           <Text style={{ color: colors.textMuted, fontSize: 11 }}>
-            {expanded ? 'Red local · Hardhat' : `${CONTRACTS.length} contratos · Red local · Hardhat`}
+            {expanded ? 'Polygon Mainnet' : `${CONTRACTS.length} contratos · Polygon Mainnet`}
           </Text>
         </View>
         <Ionicons
