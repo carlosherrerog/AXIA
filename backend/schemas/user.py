@@ -51,7 +51,6 @@ class UserResponse(BaseModel):
     location: Optional[str] = None
     created_at: datetime
     wallet_address: Optional[str] = None
-    is_collection_public: bool = False
 
     class Config:
         from_attributes = True
