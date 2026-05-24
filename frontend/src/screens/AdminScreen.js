@@ -540,7 +540,7 @@ function FeesCard({ colors }) {
           </View>
         )}
 
-        {/* Wallet destinataria */}
+        {/* Wallet que recibe comisiones */}
         {!loading && fees && (
           <View style={{
             backgroundColor: colors.surface, borderRadius: 9,
@@ -548,9 +548,17 @@ function FeesCard({ colors }) {
             paddingHorizontal: 10, paddingVertical: 8, gap: 5,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ color: colors.textMuted, fontSize: 9, fontWeight: '700', letterSpacing: 0.6 }}>
-                WALLET DESTINATARIA
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 8 }}>
+                <Ionicons name="arrow-forward-circle-outline" size={13} color="#8247e5" />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '600' }}>
+                    Wallet receptora de comisiones
+                  </Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 10, marginTop: 1 }}>
+                    Recibe el porcentaje de plataforma de cada venta
+                  </Text>
+                </View>
+              </View>
               <TouchableOpacity onPress={() => setEditRecipient(r => !r)}>
                 <Ionicons name={editRecipient ? 'close' : 'pencil-outline'} size={12} color={colors.textMuted} />
               </TouchableOpacity>
@@ -851,6 +859,7 @@ const CONTRACTS = [
 ];
 
 function ContractsPanel({ colors }) {
+  const [expanded,  setExpanded]  = useState(false);
   const [copiedKey, setCopiedKey] = useState(null);
 
   const handleCopy = async (key, address) => {
@@ -867,25 +876,37 @@ function ContractsPanel({ colors }) {
       marginBottom: 18, overflow: 'hidden',
     }}>
       <View style={{ height: 2, backgroundColor: '#8b5cf6' }} />
-      <View style={{ padding: 18 }}>
 
-        {/* Cabecera */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <View style={{
-            width: 34, height: 34, borderRadius: 10,
-            backgroundColor: '#8b5cf615', borderWidth: 1, borderColor: '#8b5cf640',
-            alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Ionicons name="code-slash-outline" size={17} color="#8b5cf6" />
-          </View>
-          <View>
-            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>Contratos desplegados</Text>
-            <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 1 }}>Polygon Amoy Testnet</Text>
-          </View>
+      {/* Cabecera — siempre visible, pulsar para desplegar */}
+      <Pressable
+        onPress={() => setExpanded(e => !e)}
+        style={[{
+          flexDirection: 'row', alignItems: 'center',
+          paddingHorizontal: 16, paddingVertical: 13, gap: 10,
+        }, Platform.OS === 'web' && { cursor: 'pointer' }]}
+      >
+        <View style={{
+          width: 30, height: 30, borderRadius: 9,
+          backgroundColor: '#8b5cf615', borderWidth: 1, borderColor: '#8b5cf640',
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Ionicons name="code-slash-outline" size={15} color="#8b5cf6" />
         </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Contratos desplegados</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+            {expanded ? 'Polygon Amoy Testnet' : `${CONTRACTS.length} contratos · Polygon Amoy Testnet`}
+          </Text>
+        </View>
+        <Ionicons
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={16} color={colors.textMuted}
+        />
+      </Pressable>
 
-        {/* Tarjetas de contratos — mismo diseño que InfoScreen */}
-        <View style={{ gap: 10 }}>
+      {/* Contenido desplegable */}
+      {expanded && (
+        <View style={{ paddingHorizontal: 14, paddingBottom: 14, gap: 8 }}>
           {CONTRACTS.map(c => {
             const isCopied = copiedKey === c.key;
             return (
@@ -896,18 +917,18 @@ function ContractsPanel({ colors }) {
               }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={{
-                    width: 32, height: 32, borderRadius: 9,
+                    width: 30, height: 30, borderRadius: 8,
                     backgroundColor: c.color + '18', borderWidth: 1, borderColor: c.color + '40',
                     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                   }}>
-                    <Ionicons name={c.icon} size={15} color={c.color} />
+                    <Ionicons name={c.icon} size={14} color={c.color} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: c.color, fontSize: 13, fontWeight: '700' }}>{c.label}</Text>
-                    <Text style={{ color: colors.textMuted, fontSize: 11, lineHeight: 16 }}>{c.desc}</Text>
+                    <Text style={{ color: c.color, fontSize: 12, fontWeight: '700' }}>{c.label}</Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 10, lineHeight: 15 }}>{c.desc}</Text>
                   </View>
                 </View>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 7 }}>
                   <TouchableOpacity
                     onPress={() => handleCopy(c.key, c.address)}
                     style={{
@@ -915,17 +936,17 @@ function ContractsPanel({ colors }) {
                       backgroundColor: isCopied ? '#10b98112' : colors.backgroundAlt,
                       borderRadius: 8, borderWidth: 1,
                       borderColor: isCopied ? '#10b98140' : colors.border,
-                      paddingHorizontal: 10, paddingVertical: 7,
+                      paddingHorizontal: 9, paddingVertical: 6,
                     }}
                   >
                     <Ionicons
                       name={isCopied ? 'checkmark-circle' : 'copy-outline'}
-                      size={13}
+                      size={12}
                       color={isCopied ? '#10b981' : colors.textMuted}
                     />
                     <Text style={{
                       color: isCopied ? '#10b981' : colors.textSecondary,
-                      fontSize: 12, fontWeight: '600', fontVariant: ['tabular-nums'],
+                      fontSize: 11, fontWeight: '600',
                       flexShrink: 1,
                     }} numberOfLines={1}>
                       {isCopied ? '¡Copiada!' : c.address}
@@ -934,22 +955,21 @@ function ContractsPanel({ colors }) {
                   <TouchableOpacity
                     onPress={() => Linking.openURL(`${EXPLORER_BASE}${c.address}`)}
                     style={{
-                      flexDirection: 'row', alignItems: 'center', gap: 5,
+                      flexDirection: 'row', alignItems: 'center', gap: 4,
                       backgroundColor: '#8b5cf612',
                       borderRadius: 8, borderWidth: 1, borderColor: '#8b5cf630',
-                      paddingHorizontal: 10, paddingVertical: 7,
+                      paddingHorizontal: 9, paddingVertical: 6,
                     }}
                   >
-                    <Ionicons name="open-outline" size={13} color="#8b5cf6" />
-                    <Text style={{ color: '#8b5cf6', fontSize: 12, fontWeight: '600' }}>Polygonscan</Text>
+                    <Ionicons name="open-outline" size={12} color="#8b5cf6" />
+                    <Text style={{ color: '#8b5cf6', fontSize: 11, fontWeight: '600' }}>Polygonscan</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             );
           })}
         </View>
-
-      </View>
+      )}
     </View>
   );
 }
