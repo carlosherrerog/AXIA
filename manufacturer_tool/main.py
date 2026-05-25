@@ -753,17 +753,24 @@ class LoginFrame(tk.Frame):
         self.pw_var = tk.StringVar()
         styled_entry(card, self.pw_var, 34, show="•").pack(pady=(2, 4))
 
+        self.status_label = tk.Label(card, text="", font=FONT_SMALL,
+                                     fg=C["text2"], bg=C["bg_alt"])
+        self.status_label.pack(pady=(0, 2))
+
         self.err_label = tk.Label(card, text="", font=FONT_SMALL,
                                   fg=C["error"], bg=C["bg_alt"])
-        self.err_label.pack(pady=(0, 10))
+        self.err_label.pack(pady=(0, 8))
 
         self.btn = styled_button(card, "Entrar", self._login, width=20)
         self.btn.pack(pady=(0, 4))
 
         tk.Label(card, text="Solo usuarios con rol FABRICANTE pueden acceder.",
-                 font=("Segoe UI", 8), fg=C["muted"], bg=C["bg_alt"]).pack(pady=(8, 0))
+                 font=FONT_SMALL, fg=C["muted"], bg=C["bg_alt"]).pack(pady=(8, 0))
 
         card.bind_all("<Return>", lambda e: self._login())
+
+        self._retrying    = False
+        self._retry_after = None
 
     def _login(self):
         ident = self.id_var.get().strip()
@@ -771,26 +778,63 @@ class LoginFrame(tk.Frame):
         if not ident or not pw:
             self.err_label.config(text="Completa todos los campos.")
             return
+        self._stop_retry()
         self.btn.config(state="disabled", text="Conectando…")
         self.err_label.config(text="")
+        self.status_label.config(text="")
+        self._try_login(ident, pw)
+
+    def _try_login(self, ident, pw):
+        self._retrying = True
 
         def do_login():
             try:
                 api.login(ident, pw)
                 self.after(0, self.on_success)
             except requests.HTTPError as e:
+                # Error real de credenciales — mostrar en rojo y parar
                 msg = "Credenciales incorrectas."
                 try:
                     msg = e.response.json().get("detail", msg)
                 except Exception:
                     pass
-                self.after(0, lambda: self._set_error(msg))
+                self.after(0, lambda m=msg: self._set_error(m))
+            except (requests.ConnectionError, requests.Timeout):
+                # Servidor no disponible — reintentar silenciosamente
+                self.after(0, self._schedule_retry_ui)
             except Exception as e:
                 self.after(0, lambda msg=str(e): self._set_error(msg))
 
         threading.Thread(target=do_login, daemon=True).start()
 
+    def _schedule_retry_ui(self):
+        """Muestra el estado 'conectando' y reintenta en 4 segundos."""
+        if not self._retrying:
+            return
+        self._animate_dots(0)
+
+    def _animate_dots(self, tick):
+        if not self._retrying:
+            return
+        dots = "." * (tick % 4)
+        self.status_label.config(text=f"Servidor no disponible, reintentando{dots}")
+        if tick % 16 == 0 and tick > 0:
+            # Cada ~4 segundos (16 ticks × 250 ms) reintentar
+            ident = self.id_var.get().strip()
+            pw    = self.pw_var.get()
+            self._try_login(ident, pw)
+        else:
+            self._retry_after = self.after(250, lambda: self._animate_dots(tick + 1))
+
+    def _stop_retry(self):
+        self._retrying = False
+        if self._retry_after:
+            self.after_cancel(self._retry_after)
+            self._retry_after = None
+
     def _set_error(self, msg):
+        self._stop_retry()
+        self.status_label.config(text="")
         self.err_label.config(text=msg)
         self.btn.config(state="normal", text="Entrar")
 
