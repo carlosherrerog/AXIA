@@ -85,7 +85,7 @@ def _load_icons():
     # SVGs de marca (requieren cairosvg)
     if CAIRO_AVAILABLE:
         svgs = {
-            "axia_logo":     ("axia-logo-on-dark.svg", 220),  # login
+            "axia_logo":     ("axia-logo-transparent.svg", 220),  # login
             "axia_wordmark": ("axia-wordmark.svg",     130),  # header
         }
         for key, (fname, w) in svgs.items():
