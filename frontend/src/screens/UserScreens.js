@@ -3,7 +3,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View, Text, ScrollView, TouchableOpacity, ActivityIndicator,
-  Modal, TextInput, Platform, Image,
+  Modal, TextInput, Platform, Image, useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ethers } from 'ethers';
@@ -186,6 +186,8 @@ export default function UserDashboardScreen({ route, navigation }) {
   const { alertProps, showAlert, hideAlert } = useAlert();
   const [confirmAlert, setConfirmAlert]   = useState({ visible: false, title: '', message: '' });
 
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
   const isDealer = loggedUser?.roles?.includes('DEALER');
 
   const showConfirm = (title, message, onConfirmCallback, btnText = 'Confirmar') => {
@@ -414,74 +416,108 @@ export default function UserDashboardScreen({ route, navigation }) {
 
       <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ paddingBottom: 100 }}>
 
-        <View style={{ marginTop: 16 }}>
-          <UserInfo
-            loggedUser={loggedUser}
-            showAlert={showAlert}
-            onSettings={() => navigation.navigate('Configuracion')}
-            stats={myNfts.length > 0 ? [
-              { label: 'En colección', value: myNfts.length },
-              { label: 'En venta',     value: myNfts.filter(n => n.is_listed && !n.is_buyer).length },
-              { label: 'Comprando',    value: myNfts.filter(n => n.is_buyer).length },
-            ] : []}
-          />
-        </View>
+        {/* Layout: dos columnas en desktop, columna única en móvil */}
+        <View style={isDesktop ? {
+          flexDirection: 'row', alignItems: 'flex-start',
+          paddingHorizontal: 20, paddingTop: 20, gap: 20,
+        } : {}}>
 
-        {/* Selector de tabs (solo dealers)  */}
-        {isDealer && (
-          <View style={{
-            flexDirection: 'row', marginHorizontal: 16, marginTop: 8, marginBottom: 4,
-            backgroundColor: colors.surface,
-            borderRadius: 12, borderWidth: 1, borderColor: colors.border,
-            padding: 4,
-          }}>
-            {[
-              { key: 'coleccion', label: 'Colección',  icon: 'grid-outline' },
-              { key: 'subastas',  label: 'Subastas',   icon: 'hammer-outline' },
-            ].map(tab => (
-              <TouchableOpacity
-                key={tab.key}
-                onPress={() => setActiveTab(tab.key)}
-                style={{
-                  flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                  paddingVertical: 10, borderRadius: 10, gap: 6,
-                  backgroundColor: activeTab === tab.key ? colors.primary : 'transparent',
-                }}
-              >
-                <Ionicons
-                  name={tab.icon}
-                  size={15}
-                  color={activeTab === tab.key ? '#fff' : colors.textSecondary}
-                />
-                <Text style={{
-                  color: activeTab === tab.key ? '#fff' : colors.textSecondary,
-                  fontWeight: '600', fontSize: 14,
-                }}>
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          {/* ── COLUMNA IZQUIERDA: perfil + nav dealer ── */}
+          <View style={isDesktop ? { width: 300, flexShrink: 0 } : { marginTop: 16 }}>
+            <UserInfo
+              loggedUser={loggedUser}
+              showAlert={showAlert}
+              onSettings={() => navigation.navigate('Configuracion')}
+              stats={myNfts.length > 0 ? [
+                { label: 'En colección', value: myNfts.length },
+                { label: 'En venta',     value: myNfts.filter(n => n.is_listed && !n.is_buyer).length },
+                { label: 'Comprando',    value: myNfts.filter(n => n.is_buyer).length },
+              ] : []}
+            />
+
+            {/* Tabs dealer — en sidebar cuando desktop */}
+            {isDealer && isDesktop && (
+              <View style={{
+                marginHorizontal: 16, marginTop: 4,
+                backgroundColor: colors.surface,
+                borderRadius: 12, borderWidth: 1, borderColor: colors.border,
+                padding: 4,
+              }}>
+                {[
+                  { key: 'coleccion', label: 'Colección', icon: 'grid-outline' },
+                  { key: 'subastas',  label: 'Subastas',  icon: 'hammer-outline' },
+                ].map(tab => (
+                  <TouchableOpacity
+                    key={tab.key}
+                    onPress={() => setActiveTab(tab.key)}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 8,
+                      paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10,
+                      backgroundColor: activeTab === tab.key ? colors.primary : 'transparent',
+                      marginBottom: 2,
+                    }}
+                  >
+                    <Ionicons name={tab.icon} size={15} color={activeTab === tab.key ? '#fff' : colors.textSecondary} />
+                    <Text style={{ color: activeTab === tab.key ? '#fff' : colors.textSecondary, fontWeight: '600', fontSize: 14 }}>
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
-        )}
 
-        {/* Tab: Colección */}
-        {(!isDealer || activeTab === 'coleccion') && (
-          <WatchSections
-            myNfts={myNfts}
-            walletAddress={loggedUser.wallet_address}
-            userRoles={loggedUser.roles}
-            onOpenImportModal={() => setImportModalVisible(true)}
-            removeNFT={removeNFT}
-            navigation={navigation}
-            onRefresh={handleManualRefresh}
-            refreshing={refreshing}
-            myBids={myBids}
-          />
-        )}
+          {/* ── COLUMNA DERECHA: contenido principal ── */}
+          <View style={isDesktop ? { flex: 1, minWidth: 0 } : {}}>
 
-        {/* Tab: Subastas (solo dealers) */}
-        {isDealer && activeTab === 'subastas' && (
-          <View style={{ paddingHorizontal: 16, paddingBottom: 40 }}>
+            {/* Tabs dealer — encima del contenido cuando móvil */}
+            {isDealer && !isDesktop && (
+              <View style={{
+                flexDirection: 'row', marginHorizontal: 16, marginTop: 8, marginBottom: 4,
+                backgroundColor: colors.surface,
+                borderRadius: 12, borderWidth: 1, borderColor: colors.border,
+                padding: 4,
+              }}>
+                {[
+                  { key: 'coleccion', label: 'Colección', icon: 'grid-outline' },
+                  { key: 'subastas',  label: 'Subastas',  icon: 'hammer-outline' },
+                ].map(tab => (
+                  <TouchableOpacity
+                    key={tab.key}
+                    onPress={() => setActiveTab(tab.key)}
+                    style={{
+                      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                      paddingVertical: 10, borderRadius: 10, gap: 6,
+                      backgroundColor: activeTab === tab.key ? colors.primary : 'transparent',
+                    }}
+                  >
+                    <Ionicons name={tab.icon} size={15} color={activeTab === tab.key ? '#fff' : colors.textSecondary} />
+                    <Text style={{ color: activeTab === tab.key ? '#fff' : colors.textSecondary, fontWeight: '600', fontSize: 14 }}>
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Tab: Colección */}
+            {(!isDealer || activeTab === 'coleccion') && (
+              <WatchSections
+                myNfts={myNfts}
+                walletAddress={loggedUser.wallet_address}
+                userRoles={loggedUser.roles}
+                onOpenImportModal={() => setImportModalVisible(true)}
+                removeNFT={removeNFT}
+                navigation={navigation}
+                onRefresh={handleManualRefresh}
+                refreshing={refreshing}
+                myBids={myBids}
+              />
+            )}
+
+            {/* Tab: Subastas (solo dealers) */}
+            {isDealer && activeTab === 'subastas' && (
+              <View style={{ paddingHorizontal: isDesktop ? 0 : 16, paddingBottom: 40 }}>
 
             {/* Botón crear */}
             <TouchableOpacity
@@ -560,6 +596,9 @@ export default function UserDashboardScreen({ route, navigation }) {
             )}
           </View>
         )}
+
+          </View>{/* fin columna derecha */}
+        </View>{/* fin contenedor dos columnas */}
 
       </ScrollView>
 
