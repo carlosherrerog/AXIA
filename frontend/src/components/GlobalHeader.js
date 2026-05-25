@@ -34,7 +34,9 @@ export default function GlobalHeader({
   const showInlineTabs = !isMobile && tabs?.length > 0 && !showBack;
 
   const [localUser, setLocalUser]               = useState(loggedUser);
-  const [internalCount, setInternalCount]       = useState(0);
+  const [internalCount, setInternalCount]       = useState(() =>
+    Platform.OS === 'web' ? parseInt(localStorage.getItem('notifCount') || '0', 10) : 0
+  );
   const [moreMenuVisible, setMoreMenuVisible]   = useState(false);
   const [disconnectVisible, setDisconnectVisible] = useState(false);
   const [walletMenuVisible, setWalletMenuVisible] = useState(false);
@@ -85,6 +87,7 @@ export default function GlobalHeader({
       try {
         const res = await api.get('/notifications');
         setInternalCount(res.data.length);
+        if (Platform.OS === 'web') localStorage.setItem('notifCount', String(res.data.length));
         if (checkNew && res.data.length > 0) {
           const newest = res.data[0];
           if (newest.id !== lastShownNotifId.current) {
