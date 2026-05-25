@@ -539,6 +539,8 @@ class ConnectWalletDialog(tk.Toplevel):
         self.geometry("520x390")
         self.configure(bg=C["bg_alt"])
         self.resizable(False, False)
+        self.lift()
+        self.focus_force()
         self.grab_set()
 
         f = styled_frame(self, C["bg_alt"])
@@ -954,6 +956,8 @@ class MainFrame(tk.Frame):
 
     # ── Wallet header ─────────────────────────────────────────────────────
     def _refresh_wallet_header(self):
+        if not self.wallet_container.winfo_exists():
+            return
         for w in self.wallet_container.winfo_children():
             w.destroy()
 
@@ -1578,8 +1582,6 @@ class AxiaMfgApp(tk.Tk):
     def show_main(self):
         self._clear()
         self._current_frame = MainFrame(self, self.show_login)
-        if not derived_wallet_address():
-            self.after(300, self._current_frame._open_connect_dialog)
 
     def _clear(self):
         for w in self.winfo_children():
