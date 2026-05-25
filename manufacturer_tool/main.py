@@ -54,11 +54,25 @@ from tkinter import filedialog, messagebox, ttk
 
 ICONS = {}  # {name: PhotoImage} — cargado en AxiaMfgApp.__init__
 
+try:
+    import cairosvg, io as _io
+    CAIRO_AVAILABLE = True
+except ImportError:
+    CAIRO_AVAILABLE = False
+
+def _load_svg(path, width):
+    """Carga un SVG como PhotoImage escalado al ancho dado."""
+    png = cairosvg.svg2png(url=str(path), output_width=width)
+    img = Image.open(_io.BytesIO(png)).convert("RGBA")
+    return ImageTk.PhotoImage(img)
+
 def _load_icons():
     global ICONS
     if not PIL_AVAILABLE:
         return
     icons_dir = BUNDLE_DIR / "icons"
+
+    # PNGs de UI
     for name in ("logo", "mint", "stock", "settings", "wallet", "logout"):
         path = icons_dir / f"{name}.png"
         if path.exists():
@@ -67,6 +81,20 @@ def _load_icons():
                 ICONS[name] = ImageTk.PhotoImage(img)
             except Exception as e:
                 print(f"Icon load error ({name}): {e}")
+
+    # SVGs de marca (requieren cairosvg)
+    if CAIRO_AVAILABLE:
+        svgs = {
+            "axia_logo":     ("axia-logo-on-dark.svg", 220),  # login
+            "axia_wordmark": ("axia-wordmark.svg",     130),  # header
+        }
+        for key, (fname, w) in svgs.items():
+            path = icons_dir / fname
+            if path.exists():
+                try:
+                    ICONS[key] = _load_svg(path, w)
+                except Exception as e:
+                    print(f"SVG load error ({key}): {e}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -723,18 +751,12 @@ class LoginFrame(tk.Frame):
         center = styled_frame(self, C["bg"])
         center.place(relx=0.5, rely=0.5, anchor="center")
 
-        logo_row = tk.Frame(center, bg=C["bg"])
-        logo_row.pack(pady=(0, 4))
-        if "logo" in ICONS:
-            # Escalar el logo a 48x48 para el login
-            try:
-                img_big = Image.open(BUNDLE_DIR / "icons" / "logo.png").resize((48, 48), Image.LANCZOS)
-                ICONS["logo_big"] = ImageTk.PhotoImage(img_big)
-                tk.Label(logo_row, image=ICONS["logo_big"], bg=C["bg"]).pack(side="left", padx=(0, 10))
-            except Exception:
-                pass
-        tk.Label(logo_row, text="AXIA", font=(_SANS, 30, "bold"),
-                 fg=C["primary"], bg=C["bg"]).pack(side="left")
+        if "axia_logo" in ICONS:
+            tk.Label(center, image=ICONS["axia_logo"],
+                     bg=C["bg"]).pack(pady=(0, 4))
+        else:
+            tk.Label(center, text="AXIA", font=(_SANS, 30, "bold"),
+                     fg=C["primary"], bg=C["bg"]).pack(pady=(0, 4))
         tk.Label(center, text="Manufacturer Tool",
                  font=(_SANS, 12), fg=C["text2"], bg=C["bg"]).pack(pady=(0, 28))
 
@@ -862,11 +884,13 @@ class MainFrame(tk.Frame):
         # Logo + título
         logo_frame = tk.Frame(self.header, bg=C["bg_alt"])
         logo_frame.pack(side="left", padx=(16, 0))
-        if "logo" in ICONS:
-            tk.Label(logo_frame, image=ICONS["logo"], bg=C["bg_alt"]).pack(side="left", padx=(0, 8))
-        tk.Label(logo_frame, text="AXIA", font=(_SANS, 15, "bold"),
-                 fg=C["primary"], bg=C["bg_alt"]).pack(side="left")
-        tk.Label(logo_frame, text=" Manufacturer", font=(_SANS, 13),
+        if "axia_wordmark" in ICONS:
+            tk.Label(logo_frame, image=ICONS["axia_wordmark"],
+                     bg=C["bg_alt"]).pack(side="left", padx=(0, 8))
+        else:
+            tk.Label(logo_frame, text="AXIA", font=(_SANS, 15, "bold"),
+                     fg=C["primary"], bg=C["bg_alt"]).pack(side="left")
+        tk.Label(logo_frame, text="Manufacturer", font=(_SANS, 11),
                  fg=C["text2"], bg=C["bg_alt"]).pack(side="left")
 
         user_info = api.user or {}
