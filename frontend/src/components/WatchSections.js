@@ -267,6 +267,7 @@ const HOW_IT_WORKS = [
 
 export function MarketplaceWatchSection({ watches, navigation }) {
   const { width } = useWindowDimensions();
+  const isMobile = width < 768;
   const [search, setSearch]   = useState('');
   const [filter, setFilter]   = useState('all');
   const [sortBy, setSortBy]   = useState('recent');
