@@ -424,7 +424,7 @@ export default function UserDashboardScreen({ route, navigation }) {
         } : {}}>
 
           {/* ── COLUMNA IZQUIERDA: perfil + nav dealer ── */}
-          <View style={isDesktop ? { width: 300, flexShrink: 0 } : { marginTop: 16 }}>
+          <View style={isDesktop ? { width: 360, flexShrink: 0 } : { marginTop: 16 }}>
             <UserInfo
               loggedUser={loggedUser}
               showAlert={showAlert}
