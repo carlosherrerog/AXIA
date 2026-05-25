@@ -23,6 +23,7 @@ const ROLE_META = {
 // ─── Admin Header ─────────────────────────────────────────────────────────────
 function AdminHeader({ user, marketPaused, onLogout, colors }) {
   const initial = (user?.username?.[0] || 'A').toUpperCase();
+  const [menuVisible, setMenuVisible] = useState(false);
 
   return (
     <View style={{
@@ -37,7 +38,7 @@ function AdminHeader({ user, marketPaused, onLogout, colors }) {
       }),
     }}>
 
-      {/* Marca izquierda: wordmark + separador + badge ADMIN */}
+      {/* Marca izquierda */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         {Platform.OS === 'web' ? (
           <Image
@@ -51,7 +52,6 @@ function AdminHeader({ user, marketPaused, onLogout, colors }) {
           </Text>
         )}
 
-        {/* Separador vertical */}
         <View style={{ width: 1, height: 18, backgroundColor: colors.border }} />
 
         <View style={{
@@ -83,7 +83,7 @@ function AdminHeader({ user, marketPaused, onLogout, colors }) {
 
       <View style={{ flex: 1 }} />
 
-      {/* Derecha: nombre + avatar + logout */}
+      {/* Derecha: nombre + avatar clicable */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13, lineHeight: 18 }}>
@@ -92,31 +92,50 @@ function AdminHeader({ user, marketPaused, onLogout, colors }) {
           <Text style={{ color: colors.textMuted, fontSize: 11 }}>{user?.email}</Text>
         </View>
 
-        <View style={{
-          width: 36, height: 36, borderRadius: 18,
-          backgroundColor: 'rgba(168,85,247,0.15)',
-          borderWidth: 2, borderColor: 'rgba(168,85,247,0.35)',
-          justifyContent: 'center', alignItems: 'center',
-        }}>
-          <Text style={{ color: '#a855f7', fontWeight: '800', fontSize: 15 }}>{initial}</Text>
-        </View>
-
-        <View style={{ width: 1, height: 18, backgroundColor: colors.border }} />
-
         <TouchableOpacity
-          onPress={onLogout}
+          onPress={() => setMenuVisible(true)}
+          activeOpacity={0.75}
           style={{
-            flexDirection: 'row', alignItems: 'center', gap: 6,
-            paddingHorizontal: 12, paddingVertical: 7,
-            borderRadius: 8,
-            backgroundColor: 'rgba(244,63,94,0.07)',
-            borderWidth: 1, borderColor: 'rgba(244,63,94,0.18)',
+            width: 36, height: 36, borderRadius: 18,
+            backgroundColor: 'rgba(168,85,247,0.15)',
+            borderWidth: 2, borderColor: 'rgba(168,85,247,0.35)',
+            justifyContent: 'center', alignItems: 'center',
           }}
         >
-          <Ionicons name="log-out-outline" size={14} color="#f43f5e" />
-          <Text style={{ color: '#f43f5e', fontSize: 12, fontWeight: '600' }}>Salir</Text>
+          <Text style={{ color: '#a855f7', fontWeight: '800', fontSize: 15 }}>{initial}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Modal de opciones */}
+      <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} onPress={() => setMenuVisible(false)}>
+          <View style={{
+            position: 'absolute', top: 60, right: 20,
+            backgroundColor: colors.backgroundAlt,
+            borderRadius: 16, borderWidth: 1, borderColor: colors.border,
+            minWidth: 220, overflow: 'hidden',
+            ...(Platform.OS === 'web' && { boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }),
+          }}>
+            {/* Cabecera */}
+            <View style={{ paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>
+                {user?.full_name || user?.username}
+              </Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>{user?.email}</Text>
+            </View>
+
+            {/* Cerrar sesión */}
+            <TouchableOpacity
+              onPress={() => { setMenuVisible(false); setTimeout(onLogout, 150); }}
+              activeOpacity={0.7}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 16 }}
+            >
+              <Ionicons name="log-out-outline" size={18} color="#f43f5e" />
+              <Text style={{ color: '#f43f5e', fontSize: 14, fontWeight: '600' }}>Cerrar sesión</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -899,7 +918,7 @@ function ContractsPanel({ colors }) {
         <View style={{ flex: 1 }}>
           <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Contratos desplegados</Text>
           <Text style={{ color: colors.textMuted, fontSize: 11 }}>
-            {expanded ? 'Polygon Mainnet' : `${CONTRACTS.length} contratos · Polygon Mainnet`}
+            {expanded ? 'Polygon Amoy' : `${CONTRACTS.length} contratos · Polygon Amoy`}
           </Text>
         </View>
         <Ionicons
