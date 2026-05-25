@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
-  Platform, useWindowDimensions, Animated, Modal, Image, Pressable,
+  Platform, useWindowDimensions, Animated, Modal, Image, Pressable, Linking,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +37,7 @@ export default function GlobalHeader({
   const [internalCount, setInternalCount]       = useState(0);
   const [moreMenuVisible, setMoreMenuVisible]   = useState(false);
   const [disconnectVisible, setDisconnectVisible] = useState(false);
+  const [walletMenuVisible, setWalletMenuVisible] = useState(false);
   const [isProcessingWallet, setIsProcessingWallet] = useState(false);
   const [walletCopied, setWalletCopied]         = useState(false);
   const { alertProps, showAlert, hideAlert }    = useAlert();
@@ -353,40 +354,25 @@ export default function GlobalHeader({
           {/* Wallet — solo si hay usuario logueado */}
           {localUser?.id && (
             isConnected ? (
-              <View style={{
-                flexDirection: 'row', alignItems: 'center',
-                borderRadius: 20, borderWidth: 1, borderColor: '#10b98140',
-                backgroundColor: '#10b98115', overflow: 'hidden',
-              }}>
-                <TouchableOpacity
-                  onPress={async () => {
-                    await Clipboard.setStringAsync(localUser.wallet_address);
-                    setWalletCopied(true);
-                    setTimeout(() => setWalletCopied(false), 2000);
-                  }}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingLeft: 10, paddingRight: 8, paddingVertical: 7 }}
-                >
-                  {walletCopied ? (
-                    <Ionicons name="checkmark" size={13} color="#10b981" />
-                  ) : (
-                    <Animated.View style={{
-                      width: 7, height: 7, borderRadius: 4,
-                      backgroundColor: '#10b981',
-                      transform: [{ scale: pulseAnim }],
-                    }} />
-                  )}
-                  <Text numberOfLines={1} style={{ color: '#10b981', fontSize: 12, fontWeight: '600' }}>
-                    {isMobile
-                      ? `${localUser.wallet_address.slice(0, 6)}…${localUser.wallet_address.slice(-4)}`
-                      : `${localUser.wallet_address.slice(0, 6)}…${localUser.wallet_address.slice(-4)}`
-                    }
-                  </Text>
-                </TouchableOpacity>
-                <View style={{ width: 1, height: 18, backgroundColor: '#10b98140' }} />
-                <TouchableOpacity onPress={() => setDisconnectVisible(true)} style={{ paddingHorizontal: 9, paddingVertical: 7 }}>
-                  <Ionicons name="log-out-outline" size={13} color="#10b98199" />
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                onPress={() => setWalletMenuVisible(true)}
+                activeOpacity={0.75}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 5,
+                  borderRadius: 20, borderWidth: 1, borderColor: '#10b98140',
+                  backgroundColor: '#10b98115',
+                  paddingHorizontal: 10, paddingVertical: 7,
+                }}
+              >
+                <Animated.View style={{
+                  width: 7, height: 7, borderRadius: 4,
+                  backgroundColor: '#10b981',
+                  transform: [{ scale: pulseAnim }],
+                }} />
+                <Text numberOfLines={1} style={{ color: '#10b981', fontSize: 12, fontWeight: '600' }}>
+                  {`${localUser.wallet_address.slice(0, 6)}…${localUser.wallet_address.slice(-4)}`}
+                </Text>
+              </TouchableOpacity>
             ) : (
               <TouchableOpacity
                 onPress={handleConnect}
@@ -467,6 +453,69 @@ export default function GlobalHeader({
         items={moreMenuItems}
         loggedUser={localUser}
       />
+
+      {/* Modal opciones wallet */}
+      <Modal visible={walletMenuVisible} transparent animationType="fade" onRequestClose={() => setWalletMenuVisible(false)}>
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' }}
+          onPress={() => setWalletMenuVisible(false)}
+        >
+          <Pressable onPress={e => e.stopPropagation()}>
+            <View style={{
+              backgroundColor: colors.backgroundAlt,
+              borderRadius: 20, borderWidth: 1, borderColor: colors.border,
+              minWidth: 280, overflow: 'hidden',
+              ...(Platform.OS === 'web' && { boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }),
+            }}>
+              {/* Cabecera */}
+              <View style={{ paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <Text style={{ color: colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4 }}>
+                  Wallet conectada
+                </Text>
+                <Text style={{ color: colors.text, fontSize: 13, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', letterSpacing: 0.5 }} numberOfLines={1}>
+                  {localUser?.wallet_address}
+                </Text>
+              </View>
+
+              {/* Opción: Copiar */}
+              <TouchableOpacity
+                onPress={async () => {
+                  await Clipboard.setStringAsync(localUser.wallet_address);
+                  setWalletCopied(true);
+                  setTimeout(() => { setWalletCopied(false); setWalletMenuVisible(false); }, 1200);
+                }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name={walletCopied ? 'checkmark-circle' : 'copy-outline'} size={18} color={walletCopied ? '#10b981' : colors.textSecondary} />
+                <Text style={{ color: walletCopied ? '#10b981' : colors.text, fontSize: 15, fontWeight: '500' }}>
+                  {walletCopied ? 'Copiado' : 'Copiar dirección'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Opción: Polygonscan */}
+              <TouchableOpacity
+                onPress={() => { Linking.openURL(`https://polygonscan.com/address/${localUser.wallet_address}`); setWalletMenuVisible(false); }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="open-outline" size={18} color="#8b5cf6" />
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '500' }}>Ver en Polygonscan</Text>
+              </TouchableOpacity>
+
+              {/* Opción: Desconectar */}
+              <TouchableOpacity
+                onPress={() => { setWalletMenuVisible(false); setTimeout(() => setDisconnectVisible(true), 200); }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 16 }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="log-out-outline" size={18} color="#ef4444" />
+                <Text style={{ color: '#ef4444', fontSize: 15, fontWeight: '500' }}>Desconectar wallet</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Modal desconectar wallet */}
       <AlertModal
