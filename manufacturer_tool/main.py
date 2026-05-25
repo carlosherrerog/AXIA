@@ -1456,7 +1456,22 @@ class MintTab(tk.Frame):
             if not WEB3_AVAILABLE:
                 raise RuntimeError("web3.py no está instalado.")
 
-            # 0. Comprobar que el UID no está ya registrado en la blockchain
+            # 0a. Comprobar saldo POL para el gas
+            self._log("Comprobando saldo…", C["text2"])
+            sender = bc.wallet_address
+            balance_wei = bc.w3.eth.get_balance(bc.w3.to_checksum_address(sender))
+            balance_pol = balance_wei / 10 ** 18
+            if balance_pol < 0.01:
+                self._log(
+                    f"✗  Saldo insuficiente: {balance_pol:.4f} POL.\n"
+                    f"   Necesitas al menos 0.01 POL para cubrir el gas del minteo.\n"
+                    f"   Consigue POL gratis en faucet.polygon.technology",
+                    C["error"]
+                )
+                return
+            self._log(f"Saldo: {balance_pol:.4f} POL  ✓", C["success"])
+
+            # 0b. Comprobar que el UID no está ya registrado en la blockchain
             self._log("Verificando UID en blockchain…", C["text2"])
             registered, existing_token = bc.get_nfc_status(uid)
             if registered:
