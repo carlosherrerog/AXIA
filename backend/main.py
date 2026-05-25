@@ -25,7 +25,7 @@ from pydantic import BaseModel
 
 import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -40,6 +40,7 @@ load_dotenv()
 # --- 1. CONFIGURACIÓN DE CORREO ---
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://axia-sandy.vercel.app")
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
@@ -341,6 +342,18 @@ async def create_notification(
 @app.get("/status")
 def get_status():
     return {"status": "online", "architecture": "MVC Hybrid"}
+
+@app.get("/nfc/{token_id}")
+def nfc_redirect(token_id: int, db: Session = Depends(database.get_db)):
+    """
+    Punto de entrada para tarjetas NFC NTAG 424 DNA.
+    El chip escribe esta URL en su memoria NDEF al mintear; escanear
+    con el móvil abre directamente la ficha pública del reloj.
+    """
+    watch = db.query(models.Watch).filter(models.Watch.token_id == token_id).first()
+    if not watch:
+        raise HTTPException(status_code=404, detail="Reloj no encontrado")
+    return RedirectResponse(url=f"{FRONTEND_URL}/watch/{token_id}")
 
 @app.post("/register", response_model=user_schemas.UserResponse)
 @limiter.limit("5/minute")

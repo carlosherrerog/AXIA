@@ -162,6 +162,11 @@ PRIVATE_KEY=
 # Claves de tu cuenta Pinata (https://app.pinata.cloud/developers/api-keys)
 PINATA_API_KEY=
 PINATA_SECRET_KEY=
+
+# Clave maestra AES-128 para proteger escritura en chips NFC NTAG 424 DNA
+# 32 caracteres hexadecimales = 16 bytes AES-128
+# Genera una con: python -c "import secrets; print(secrets.token_hex(16))"
+NFC_MASTER_KEY=
 """
 
 def _bootstrap_env():
@@ -454,6 +459,230 @@ def read_nfc_uid() -> str:
     if sw1 != 0x90:
         raise IOError("Error de lectura NFC (sin tarjeta o error APDU).")
     return ":".join(f"{b:02X}" for b in data)
+
+
+def _nfc_open_connection():
+    """Abre y devuelve una conexión PC/SC al primer lector disponible."""
+    r_list = nfc_readers()
+    if not r_list:
+        raise IOError("No se detecta ningún lector NFC por USB.")
+    conn = r_list[0].createConnection()
+    conn.connect()
+    return conn
+
+
+def write_ndef_url(token_id: int) -> None:
+    """
+    Escribe la URL de la ficha pública del reloj en el chip NTAG 424 DNA.
+
+    Secuencia ISO 7816-4 T4T verificada en laboratorio (25/05/2026):
+      (A) SELECT NDEF Application  (AID D2760000850101)
+      (B) SELECT NDEF File         (FID E104)
+      (C) UPDATE BINARY            (offset 0x0000)
+
+    La URL tiene formato: {API_URL}/nfc/{token_id}
+    El backend redirige al frontend a /watch/{token_id}.
+    """
+    base_url = get_cfg("API_URL", "https://axia-8ivf.onrender.com").rstrip("/")
+    url_full = f"{base_url}/nfc/{token_id}"
+
+    if url_full.startswith("https://"):
+        url_suffix = url_full[8:].encode("utf-8")
+        prefix_byte = 0x04          # NFC Forum URI prefix code para "https://"
+    elif url_full.startswith("http://"):
+        url_suffix = url_full[7:].encode("utf-8")
+        prefix_byte = 0x03
+    else:
+        url_suffix = url_full.encode("utf-8")
+        prefix_byte = 0x00
+
+    payload     = bytes([prefix_byte]) + url_suffix
+    ndef_record = bytes([0xD1, 0x01, len(payload), 0x55]) + payload
+    nlen        = len(ndef_record)
+    file_data   = bytes([0x00, nlen]) + ndef_record  # prefijo NLEN (2 bytes big-endian)
+
+    conn = _nfc_open_connection()
+    try:
+        # (A) SELECT NDEF Application
+        _, sw1, sw2 = conn.transmit(
+            [0x00, 0xA4, 0x04, 0x00, 0x07, 0xD2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x01, 0x00])
+        if (sw1, sw2) != (0x90, 0x00):
+            raise IOError(f"SELECT NDEF App falló: SW {sw1:02X} {sw2:02X}")
+
+        # (B) SELECT NDEF File (FID = E104 — estándar T4T para NTAG 424 DNA)
+        _, sw1, sw2 = conn.transmit(
+            [0x00, 0xA4, 0x00, 0x0C, 0x02, 0xE1, 0x04, 0x00])
+        if (sw1, sw2) != (0x90, 0x00):
+            raise IOError(f"SELECT NDEF File falló: SW {sw1:02X} {sw2:02X}")
+
+        # (C) UPDATE BINARY desde offset 0x0000
+        apdu = [0x00, 0xD6, 0x00, 0x00, len(file_data)] + list(file_data)
+        _, sw1, sw2 = conn.transmit(apdu)
+        if (sw1, sw2) != (0x90, 0x00):
+            raise IOError(f"UPDATE BINARY falló: SW {sw1:02X} {sw2:02X}")
+    finally:
+        conn.disconnect()
+
+
+# ── Autenticación AES-128 EV2 y bloqueo de escritura ──────────────────────────
+
+def _aes_cbc(key: bytes, iv: bytes, data: bytes, encrypt: bool) -> bytes:
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    from cryptography.hazmat.backends import default_backend
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+    op = cipher.encryptor() if encrypt else cipher.decryptor()
+    return op.update(data) + op.finalize()
+
+
+def _aes_cmac(key: bytes, data: bytes) -> bytes:
+    from cryptography.hazmat.primitives.cmac import CMAC
+    from cryptography.hazmat.primitives.ciphers import algorithms
+    from cryptography.hazmat.backends import default_backend
+    c = CMAC(algorithms.AES(key), backend=default_backend())
+    c.update(data)
+    return c.finalize()
+
+
+def _authenticate_ev2(conn, key: bytes, key_no: int = 0):
+    """
+    Autenticación EV2 con NTAG 424 DNA (protocolo AES-128 NXP).
+    Protocolo descrito en NXP AN12343 sección 10 / NT4H2421G datasheet.
+
+    Retorna (session_enc_key, session_mac_key, ti, cmd_ctr).
+    'ti' es el Transaction Identifier de 4 bytes usado para calcular MACs.
+    'cmd_ctr' empieza en 1 después de la autenticación (la auth ya cuenta como cmd 0).
+    """
+    import os
+
+    # ── Paso 1: AuthEV2First — enviar número de clave ──────────────────────
+    # INS=71, Lc=02, Data=[keyNo, PCDCap2_length=00]
+    resp, sw1, sw2 = conn.transmit(
+        [0x90, 0x71, 0x00, 0x00, 0x02, key_no, 0x00, 0x00])
+    if sw1 != 0x91 or sw2 != 0xAF:
+        raise IOError(f"AuthEV2First: SW inesperado {sw1:02X} {sw2:02X}")
+    enc_rnd_b = bytes(resp)  # 16 bytes: AES-CBC(key, IV=0, RndB)
+
+    # ── Paso 2: Descifrar RndB ────────────────────────────────────────────
+    rnd_b = _aes_cbc(key, b'\x00' * 16, enc_rnd_b, encrypt=False)
+
+    # ── Paso 3-4: Generar RndA y rotar RndB a la izquierda 1 byte ────────
+    rnd_a   = os.urandom(16)
+    rnd_b_r = rnd_b[1:] + rnd_b[:1]
+
+    # ── Paso 5: Cifrar (RndA || RndB_rot) con IV = enc_rnd_b ─────────────
+    token = _aes_cbc(key, enc_rnd_b, rnd_a + rnd_b_r, encrypt=True)  # 32 bytes
+
+    # ── Paso 6: AuthContinue ──────────────────────────────────────────────
+    resp, sw1, sw2 = conn.transmit(
+        [0x90, 0xAF, 0x00, 0x00, 0x20] + list(token) + [0x00])
+    if sw1 != 0x91 or sw2 != 0x00:
+        raise IOError(
+            f"AuthEV2Continue: SW {sw1:02X} {sw2:02X} — clave incorrecta o protocolo no soportado")
+
+    enc_resp = bytes(resp)  # 16 bytes (RndA_rot enc) o 32 bytes (+ TI + caps)
+
+    # ── Paso 7: Descifrar y verificar RndA_rot ───────────────────────────
+    # IV para descifrar = últimos 16 bytes del token que enviamos
+    rnd_a_rot_recv = _aes_cbc(key, token[16:], enc_resp[:16], encrypt=False)
+    if rnd_a_rot_recv != rnd_a[1:] + rnd_a[:1]:
+        raise IOError("AuthEV2: verificación de RndA fallida")
+
+    # ── Extracción de TI (Transaction Identifier) ─────────────────────────
+    # Si la respuesta es ≥ 32 bytes, TI está en los bytes 0-3 del segundo bloque descifrado
+    ti = b'\x00' * 4
+    if len(enc_resp) >= 32:
+        block2 = _aes_cbc(key, enc_resp[:16], enc_resp[16:32], encrypt=False)
+        ti = block2[:4]
+
+    # ── Paso 8: Derivar session keys (NXP EV2 KDF vía AES-CMAC) ─────────
+    # Input vectors según AN12343:
+    #   SV_ENC = A5 5A 00 91 87 28 10 80 || RndA[0:2] || RndB[0:2] || RndA[2:8] || RndB[2:8]
+    #   SV_MAC = 5A A5 00 91 87 28 10 80 || RndA[0:2] || RndB[0:2] || RndA[2:8] || RndB[2:8]
+    sv_suffix = rnd_a[:2] + rnd_b[:2] + rnd_a[2:8] + rnd_b[2:8]
+    sv_enc = bytes([0xA5, 0x5A, 0x00, 0x91, 0x87, 0x28, 0x10, 0x80]) + sv_suffix
+    sv_mac = bytes([0x5A, 0xA5, 0x00, 0x91, 0x87, 0x28, 0x10, 0x80]) + sv_suffix
+
+    session_enc_key = _aes_cmac(key, sv_enc)
+    session_mac_key = _aes_cmac(key, sv_mac)
+
+    return session_enc_key, session_mac_key, ti, 1  # cmd_ctr=1 tras la autenticación
+
+
+def _compute_mac(session_mac_key: bytes, ins: int, cmd_ctr: int,
+                 ti: bytes, cmd_data: bytes) -> bytes:
+    """
+    Calcula el MAC truncado (8 bytes) para un comando CommMode.MAC.
+    MAC_input = INS || CmdCtr[LE 2B] || TI[4B] || CmdData
+    Truncado: bytes en posiciones impares del CMAC (1,3,5,7,9,11,13,15) → 8 bytes.
+    """
+    mac_input = bytes([ins]) + cmd_ctr.to_bytes(2, 'little') + ti + cmd_data
+    full_mac  = _aes_cmac(session_mac_key, mac_input)
+    return bytes([full_mac[i] for i in range(1, 16, 2)])  # 8 bytes
+
+
+def lock_nfc_chip(master_key_hex: str = None) -> None:
+    """
+    Protege el chip NTAG 424 DNA contra escritura no autorizada.
+
+    Secuencia:
+      1. AuthEV2First con master key actual (por defecto: 00*16 en chip virgen)
+      2. ChangeFileSettings: restringe Write del fichero NDEF a Key 0
+      3. ChangeKey: cambia Key 0 a NFC_MASTER_KEY del .env
+
+    Tras esto, UPDATE BINARY sin autenticación devuelve SW 6982.
+    Leer (escanear con el móvil) sigue siendo libre.
+
+    'master_key_hex': si se omite, usa NFC_MASTER_KEY del .env.
+                      Para chip recién salido de fábrica usar "0"*32.
+    """
+    if master_key_hex is None:
+        master_key_hex = get_cfg("NFC_MASTER_KEY", "").strip() or ("00" * 16)
+    current_key = bytes.fromhex(master_key_hex.zfill(32))
+
+    new_key_hex = get_cfg("NFC_MASTER_KEY", "").strip()
+    if not new_key_hex or len(new_key_hex) != 32:
+        raise ValueError(
+            "NFC_MASTER_KEY no configurada o inválida. "
+            "Debe ser 32 caracteres hex (16 bytes AES-128).")
+    new_key = bytes.fromhex(new_key_hex)
+
+    conn = _nfc_open_connection()
+    try:
+        # ── 1. Autenticación EV2 ──────────────────────────────────────────
+        sess_enc, sess_mac, ti, cmd_ctr = _authenticate_ev2(conn, current_key, key_no=0)
+
+        # ── 2. ChangeFileSettings: restringir escritura del fichero NDEF ──
+        # FileNo = 0x02 (NDEF file dentro de la aplicación NXP)
+        # FileOption = 0x00 (CommMode=Plain para datos, MAC solo en el comando)
+        # AccessRights (2 bytes):
+        #   Byte 0: {ReadWrite_key[4] | Change_key[4]} = 0x0 | 0x0 → 0x00
+        #   Byte 1: {Read_key[4] | Write_key[4]}       = 0xE | 0x0 → 0xE0
+        #   ReadWrite=0 (key 0), Change=0 (key 0), Read=E (libre), Write=0 (key 0)
+        cmd_data_cfs = bytes([0x02, 0x00, 0x00, 0xE0])
+        mac_cfs = _compute_mac(sess_mac, 0x5F, cmd_ctr, ti, cmd_data_cfs)
+        apdu_cfs = [0x90, 0x5F, 0x00, 0x00, len(cmd_data_cfs) + 8] + \
+                   list(cmd_data_cfs) + list(mac_cfs) + [0x00]
+        _, sw1, sw2 = conn.transmit(apdu_cfs)
+        if sw1 != 0x91 or sw2 != 0x00:
+            raise IOError(f"ChangeFileSettings falló: SW {sw1:02X} {sw2:02X}")
+        cmd_ctr += 1
+
+        # ── 3. ChangeKey: cambiar Key 0 a la clave secreta del fabricante ─
+        # Para auto-cambio de Key 0 (la clave con la que estamos autenticados):
+        #   EncNewKey = AES-CBC(sess_enc, IV=0, new_key)  [no XOR con current_key]
+        #   CRC32 no necesario en auto-cambio de la misma clave
+        enc_new_key = _aes_cbc(sess_enc, b'\x00' * 16, new_key, encrypt=True)
+        key_ver = 0x01  # versión de clave (informativo, 1 byte)
+        cmd_data_ck = bytes([0x00]) + enc_new_key + bytes([key_ver])  # KeyNo || EncKey || Ver
+        mac_ck = _compute_mac(sess_mac, 0xC4, cmd_ctr, ti, cmd_data_ck)
+        apdu_ck = [0x90, 0xC4, 0x00, 0x00, len(cmd_data_ck) + 8] + \
+                  list(cmd_data_ck) + list(mac_ck) + [0x00]
+        _, sw1, sw2 = conn.transmit(apdu_ck)
+        if sw1 != 0x91 or sw2 != 0x00:
+            raise IOError(f"ChangeKey falló: SW {sw1:02X} {sw2:02X}")
+
+    finally:
+        conn.disconnect()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1281,6 +1510,27 @@ class MintTab(tk.Frame):
                 "hash_uid":      hash_uid,
                 "mint_date":     mint_iso,
             })
+
+            self._log(f"✓  Registrado en AXIA. Programando chip NFC…", C["success"])
+
+            # 5. Escribir URL NDEF en el chip
+            if NFC_AVAILABLE:
+                try:
+                    write_ndef_url(int(token_id))
+                    self._log(f"✓  NDEF escrito — URL: {get_cfg('API_URL')}/nfc/{token_id}", C["success"])
+                except Exception as e_nfc:
+                    self._log(f"⚠  NDEF: {e_nfc}\n   El reloj está minteado. Puedes programar la tarjeta manualmente.", C["warning"])
+
+            # 6. Bloquear escritura del chip (requiere NFC_MASTER_KEY en .env)
+            nfc_key = get_cfg("NFC_MASTER_KEY", "").strip()
+            if NFC_AVAILABLE and len(nfc_key) == 32:
+                try:
+                    lock_nfc_chip(master_key_hex="00" * 16)  # chip virgen: clave 00*16
+                    self._log(f"✓  Chip bloqueado — escritura protegida con NFC_MASTER_KEY.", C["success"])
+                except Exception as e_lock:
+                    self._log(f"⚠  Bloqueo: {e_lock}\n   La URL está escrita. El bloqueo puede hacerse después.", C["warning"])
+            elif NFC_AVAILABLE:
+                self._log("⚠  NFC_MASTER_KEY no configurada — chip no bloqueado (escritura libre).", C["warning"])
 
             self._log(
                 f"✓  Reloj registrado con éxito.\n"
