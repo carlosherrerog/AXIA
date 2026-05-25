@@ -9,6 +9,16 @@ import { useTheme } from '../context/ThemeContext';
 import GlobalHeader from '../components/GlobalHeader';
 import api from '../api/api';
 
+function getStoredUser() {
+  try {
+    if (Platform.OS === 'web') {
+      const raw = localStorage.getItem('userData');
+      return raw ? JSON.parse(raw) : null;
+    }
+  } catch {}
+  return null;
+}
+
 // Tarjetas principales — contenido resumido, siempre visible
 const FEATURE_DATA = [
   {
@@ -472,7 +482,7 @@ export default function InfoScreen({ navigation }) {
   const isDesktop = width >= 768;
   const maxWidth  = Math.min(width, 820);
   const [emailCopied, setEmailCopied] = useState(false);
-  const [loggedUser, setLoggedUser]   = useState(null);
+  const [loggedUser, setLoggedUser]   = useState(getStoredUser);
 
   useEffect(() => {
     api.get('/users/me').then(r => setLoggedUser(r.data)).catch(() => {});
