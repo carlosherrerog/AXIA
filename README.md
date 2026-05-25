@@ -94,9 +94,28 @@ El historial completo de cada reloj se reconstruye leyendo los eventos inmutable
 
 El backend indexa estos eventos con `get_ownership_history_from_chain(token_id)` y los persiste en la tabla `watch_ownership_history`. Las transferencias dobles generadas por el escrow (vendedor→contrato y contrato→comprador) se colapsan en una sola entrada con el campo `via_contract_wallet`. La blockchain actúa como registro canónico; la base de datos es un índice prescindible que se puede reconstruir íntegramente en cualquier momento.
 
-### Integración NFC (NTAG424 DNA)
+### Integración NFC — Tarjeta NTAG 424 DNA
 
-Cada reloj físico lleva un chip NFC NTAG424 DNA que almacena una URL de deep link hacia AXIA. El NTAG424 soporta SUN (Secure Unique NFC): genera un hash criptográfico único en cada lectura que el backend verifica contra la clave secreta de la tarjeta. Esto garantiza que la tarjeta física es genuina y no una copia. Al acercar el móvil al reloj, la app se abre directamente en la pantalla del gemelo digital correspondiente.
+Cada reloj físico se entrega junto a una **tarjeta de autenticidad** con chip NFC NXP NTAG 424 DNA integrado. La tarjeta (formato similar a una tarjeta de crédito) acompaña al reloj en su estuche y actúa como certificado físico del gemelo digital.
+
+**Por qué tarjeta y no chip integrado en el reloj:**
+La caja metálica de un reloj actúa como jaula de Faraday e impide la comunicación RF. Integrar un chip NFC en el interior del reloj requeriría modificar el diseño de la caja o la esfera, lo que no es viable en relojería de lujo tradicional. La tarjeta de autenticidad es la solución estándar del sector (similar al enfoque de LVMH/AURA).
+
+**Proceso de vinculación (realizado por el fabricante con `manufacturer_tool`):**
+
+1. El fabricante acerca la tarjeta al lector USB ACS ACR122U
+2. La herramienta lee el UID del chip: comando PC/SC `FF CA 00 00 00`
+3. El UID se hashea con `keccak256` y se registra en el contrato `WatchNFT` al mintear
+4. Tras el minteo, se escribe en la tarjeta un mensaje NDEF con la URL de la ficha pública del reloj mediante comandos ISO 7816-4 T4T:
+   - `SELECT NDEF Application` (AID `D2760000850101`)
+   - `SELECT NDEF File` (FID `E104`)
+   - `UPDATE BINARY` con el record URI
+
+**Cuando el comprador escanea la tarjeta:**
+El sistema operativo del móvil (Android/iOS) detecta el NDEF automáticamente y abre la URL en el navegador, sin necesidad de ninguna app instalada. La URL apunta a la ficha pública del reloj en AXIA donde se puede ver el propietario actual, el historial de propiedad on-chain y las especificaciones técnicas.
+
+**Chip:** NXP NTAG 424 DNA — ISO 14443A, ISO 7816-4 T4T, memoria NDEF 256 bytes, compatible con SUN (Secure Unique NFC) para URLs dinámicas e irrepetibles (Fase 2).
+**Lector de fabricación:** ACS ACR122U (USB PC/SC, compatible con Linux y Windows).
 
 ## Stack tecnológico
 
