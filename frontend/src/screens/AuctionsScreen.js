@@ -47,6 +47,8 @@ export default function AuctionsScreen({ navigation }) {
   const [sortBy, setSortBy]         = useState('recent');
   const { alertProps } = useAlert();
 
+  const isMobile = width < 768;
+
   let cols = 2;
   if (width >= 1200) cols = 5;
   else if (width >= 960) cols = 4;
@@ -136,38 +138,40 @@ export default function AuctionsScreen({ navigation }) {
           <View>
             {/* ── Hero banner ── */}
             <View style={{
-              marginTop: 18, marginBottom: 16,
+              marginTop: isMobile ? 10 : 18, marginBottom: isMobile ? 10 : 16,
               backgroundColor: colors.backgroundAlt,
               borderRadius: 16, borderWidth: 1, borderColor: colors.border,
-              padding: 20,
+              padding: isMobile ? 14 : 20,
               ...(Platform.OS === 'web' && {
                 background: `linear-gradient(135deg, ${colors.backgroundAlt} 0%, #1a1040 100%)`,
               }),
             }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                <Ionicons name="trending-up-outline" size={18} color={colors.primary} style={{ marginRight: 8 }} />
-                <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: isMobile ? 4 : 8 }}>
+                <Ionicons name="trending-up-outline" size={isMobile ? 14 : 18} color={colors.primary} style={{ marginRight: 6 }} />
+                <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' }}>
                   Subastas en vivo · Blockchain
                 </Text>
               </View>
-              <Text style={{ color: colors.text, fontSize: 22, fontWeight: '700', letterSpacing: -0.3, marginBottom: 4 }}>
+              <Text style={{ color: colors.text, fontSize: isMobile ? 17 : 22, fontWeight: '700', letterSpacing: -0.3, marginBottom: 4 }}>
                 Subastas AXIA
               </Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20 }}>
-                Puja en tiempo real por relojes de alta relojería certificados en blockchain.
-              </Text>
+              {!isMobile && (
+                <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20 }}>
+                  Puja en tiempo real por relojes de alta relojería certificados en blockchain.
+                </Text>
+              )}
 
               {/* Stats siempre visibles */}
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 16 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: isMobile ? 10 : 16 }}>
                 {[
                   { icon: 'hammer-outline',       label: 'Activas',       value: auctions.length },
                   { icon: 'storefront-outline',    label: 'Vendedores',    value: sellersCount },
                   { icon: 'alert-circle-outline',  label: 'Cierran pronto',value: urgentCount },
                 ].map(m => (
                   <View key={m.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                    <Ionicons name={m.icon} size={13} color={m.value > 0 ? colors.primaryLight : colors.textMuted} />
-                    <Text style={{ color: m.value > 0 ? colors.primaryLight : colors.textMuted, fontWeight: '700', fontSize: 13 }}>{m.value}</Text>
-                    <Text style={{ color: colors.textMuted, fontSize: 12 }}>{m.label}</Text>
+                    <Ionicons name={m.icon} size={12} color={m.value > 0 ? colors.primaryLight : colors.textMuted} />
+                    <Text style={{ color: m.value > 0 ? colors.primaryLight : colors.textMuted, fontWeight: '700', fontSize: 12 }}>{m.value}</Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 11 }}>{m.label}</Text>
                   </View>
                 ))}
               </View>
