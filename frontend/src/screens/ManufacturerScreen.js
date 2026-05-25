@@ -8,19 +8,28 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import api, { getToken, WS_URL } from '../api/api';
 import GlobalHeader from '../components/GlobalHeader';
-import UserInfo from '../components/UserInfo';
 import WatchCard from '../components/WatchCard';
 import { useTheme } from '../context/ThemeContext';
 import AlertModal, { useAlert } from '../components/AlertModal';
 
-// Pantalla principal 
+function getStoredUser() {
+  try {
+    if (Platform.OS === 'web') {
+      const raw = localStorage.getItem('userData');
+      return raw ? JSON.parse(raw) : null;
+    }
+  } catch {}
+  return null;
+}
+
 export default function ManufacturerScreen({ navigation }) {
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
+  const isDesktop = width >= 900;
   const cardWidth = 200;
-  const cols = Math.max(1, Math.floor((Math.min(width, 1200) - 32) / (cardWidth + 16)));
+  const cols = Math.max(1, Math.floor((Math.min(width, 1000) - 32) / (cardWidth + 16)));
 
-  const [loggedUser, setLoggedUser]   = useState(null);
+  const [loggedUser, setLoggedUser]   = useState(getStoredUser);
   const [watches, setWatches]         = useState([]);
   const [mintedCount, setMintedCount] = useState(0);
   const [loading, setLoading]         = useState(true);
@@ -111,6 +120,8 @@ export default function ManufacturerScreen({ navigation }) {
                         : activeTab === 'listed' ? listed
                         : watches;
 
+  const hasWatches = watches.length > 0;
+
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
@@ -139,12 +150,27 @@ export default function ManufacturerScreen({ navigation }) {
           />
         }
       >
-        <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100, overflow: 'visible' }}>
+        <View style={{
+          paddingHorizontal: isDesktop ? 24 : 16,
+          paddingTop: isDesktop ? 24 : 16,
+          paddingBottom: 100,
+          maxWidth: isDesktop ? 1000 : undefined,
+          alignSelf: 'center',
+          width: '100%',
+        }}>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <Text style={{ color: colors.text, fontSize: 22, fontWeight: 'bold' }}>
-              Panel de Fabricante
-            </Text>
+          {/* Cabecera: título + cerrar sesión */}
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+            <View>
+              <Text style={{ color: colors.text, fontSize: 22, fontWeight: 'bold' }}>
+                Panel de Fabricante
+              </Text>
+              {loggedUser?.username ? (
+                <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
+                  {loggedUser.username}
+                </Text>
+              ) : null}
+            </View>
             <TouchableOpacity
               onPress={() => {
                 if (Platform.OS === 'web') localStorage.clear();
@@ -162,84 +188,127 @@ export default function ManufacturerScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          <View style={{ marginHorizontal: -16, marginBottom: 22 }}>
-            <UserInfo loggedUser={loggedUser} showAlert={showAlert} />
-          </View>
-
           {/* Tarjetas de estadísticas */}
-          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>
-            <StatCard icon="cube-outline"     label="En Stock"       value={stock.length}   color="#10b981"         colors={colors} />
-            <StatCard icon="pricetag-outline" label="En Venta"       value={listed.length}  color={colors.primary}  colors={colors} />
-            <StatCard icon="warning-outline"  label="Alterados"      value={altered.length} color="#f43f5e"         colors={colors} />
-            <StatCard icon="layers-outline"   label="Total Mintados" value={mintedCount}     color={colors.primaryLight} colors={colors} />
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+            <StatCard icon="cube-outline"     label="En Stock"       value={stock.length}   color="#10b981"             colors={colors} />
+            <StatCard icon="pricetag-outline" label="En Venta"       value={listed.length}  color={colors.primary}      colors={colors} />
+            <StatCard icon="warning-outline"  label="Alterados"      value={altered.length} color="#f43f5e"             colors={colors} />
+            <StatCard icon="layers-outline"   label="Total Mintados" value={mintedCount}    color={colors.primaryLight} colors={colors} />
           </View>
 
-          {/* Fila: nota + botón importar */}
-          <View style={{ flexDirection: 'row', alignItems: 'stretch', gap: 10, marginBottom: 20 }}>
-            <View style={{
-              flex: 1,
-              backgroundColor: `${colors.primary}18`, borderRadius: 10,
-              borderWidth: 1, borderColor: `${colors.primary}40`,
-              padding: 14, flexDirection: 'row', alignItems: 'flex-start',
-            }}>
-              <Ionicons name="information-circle-outline" size={20} color={colors.primaryLight} style={{ marginRight: 10, marginTop: 1 }} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.primaryLight, fontWeight: '600', fontSize: 13, marginBottom: 2 }}>
-                  Minteo de Relojes
-                </Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
-                  Usa la herramienta de escritorio AXIA Manufacturer para mintear nuevos relojes con tu chip NFC.
-                </Text>
+          {/* Banner de minteo: solo cuando no hay relojes aún */}
+          {!hasWatches && (
+            <View style={{ flexDirection: 'row', alignItems: 'stretch', gap: 10, marginBottom: 20 }}>
+              <View style={{
+                flex: 1,
+                backgroundColor: `${colors.primary}18`, borderRadius: 10,
+                borderWidth: 1, borderColor: `${colors.primary}40`,
+                padding: 14, flexDirection: 'row', alignItems: 'flex-start',
+              }}>
+                <Ionicons name="information-circle-outline" size={20} color={colors.primaryLight} style={{ marginRight: 10, marginTop: 1 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.primaryLight, fontWeight: '600', fontSize: 13, marginBottom: 2 }}>
+                    Minteo de Relojes
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
+                    Usa la herramienta de escritorio AXIA Manufacturer para mintear nuevos relojes con tu chip NFC.
+                  </Text>
+                </View>
               </View>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => setImportModalVisible(true)}
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: 10, borderWidth: 1, borderColor: colors.border,
-                paddingHorizontal: 14, paddingVertical: 12,
-                alignItems: 'center', justifyContent: 'center', gap: 4,
-              }}
-            >
-              <Ionicons name="download-outline" size={20} color={colors.primaryLight} />
-              <Text style={{ color: colors.primaryLight, fontSize: 11, fontWeight: '600' }}>Importar</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Tabs de filtro */}
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-            {[
-              { key: 'all',    label: 'Todos' },
-              { key: 'listed', label: 'En venta' },
-              { key: 'stock',  label: 'Stock disponible' },
-            ].map(tab => (
               <TouchableOpacity
-                key={tab.key}
-                onPress={() => setActiveTab(tab.key)}
+                onPress={() => setImportModalVisible(true)}
                 style={{
-                  paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-                  backgroundColor: activeTab === tab.key ? colors.primary : colors.surface,
-                  borderWidth: 1, borderColor: activeTab === tab.key ? colors.primary : colors.border,
+                  backgroundColor: colors.surface,
+                  borderRadius: 10, borderWidth: 1, borderColor: colors.border,
+                  paddingHorizontal: 14, paddingVertical: 12,
+                  alignItems: 'center', justifyContent: 'center', gap: 4,
                 }}
               >
-                <Text style={{
-                  color: activeTab === tab.key ? '#FFF' : colors.textSecondary,
-                  fontSize: 13, fontWeight: activeTab === tab.key ? '600' : '400',
-                }}>
-                  {tab.label}
-                </Text>
+                <Ionicons name="download-outline" size={20} color={colors.primaryLight} />
+                <Text style={{ color: colors.primaryLight, fontSize: 11, fontWeight: '600' }}>Importar</Text>
               </TouchableOpacity>
-            ))}
-          </View>
+            </View>
+          )}
 
-          {/* Lista de relojes */}
+          {/* Fila de filtros + botón importar (cuando ya hay relojes) */}
+          {hasWatches && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+              <View style={{ flexDirection: 'row', gap: 8, flex: 1, flexWrap: 'wrap' }}>
+                {[
+                  { key: 'all',    label: 'Todos' },
+                  { key: 'listed', label: 'En venta' },
+                  { key: 'stock',  label: 'Stock disponible' },
+                ].map(tab => (
+                  <TouchableOpacity
+                    key={tab.key}
+                    onPress={() => setActiveTab(tab.key)}
+                    style={{
+                      paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+                      backgroundColor: activeTab === tab.key ? colors.primary : colors.surface,
+                      borderWidth: 1, borderColor: activeTab === tab.key ? colors.primary : colors.border,
+                    }}
+                  >
+                    <Text style={{
+                      color: activeTab === tab.key ? '#FFF' : colors.textSecondary,
+                      fontSize: 13, fontWeight: activeTab === tab.key ? '600' : '400',
+                    }}>
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity
+                onPress={() => setImportModalVisible(true)}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 6,
+                  backgroundColor: `${colors.primary}18`,
+                  borderRadius: 20, borderWidth: 1, borderColor: `${colors.primary}40`,
+                  paddingHorizontal: 14, paddingVertical: 8,
+                }}
+              >
+                <Ionicons name="download-outline" size={15} color={colors.primaryLight} />
+                <Text style={{ color: colors.primaryLight, fontSize: 13, fontWeight: '600' }}>Importar</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Lista de relojes / estado vacío */}
           {filteredWatches.length === 0 ? (
-            <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-              <Ionicons name="watch-outline" size={56} color={colors.border} />
-              <Text style={{ color: colors.textSecondary, marginTop: 12, fontSize: 15 }}>
-                No hay relojes en esta categoría
-              </Text>
+            <View style={{ alignItems: 'center', paddingVertical: 48 }}>
+              <View style={{
+                width: 72, height: 72, borderRadius: 36,
+                backgroundColor: `${colors.primary}12`,
+                borderWidth: 1, borderColor: `${colors.primary}25`,
+                alignItems: 'center', justifyContent: 'center',
+                marginBottom: 16,
+              }}>
+                <Ionicons name="watch-outline" size={34} color={`${colors.primary}80`} />
+              </View>
+              {!hasWatches ? (
+                <>
+                  <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600', marginBottom: 6 }}>
+                    Aún no tienes relojes
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center', maxWidth: 260, lineHeight: 20, marginBottom: 20 }}>
+                    Importa tu primer reloj mintado para empezar a gestionar tu stock.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setImportModalVisible(true)}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 8,
+                      backgroundColor: colors.primary,
+                      borderRadius: 24, paddingHorizontal: 24, paddingVertical: 12,
+                    }}
+                  >
+                    <Ionicons name="download-outline" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>Importar primer reloj</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+                  No hay relojes en esta categoría
+                </Text>
+              )}
             </View>
           ) : (
             <FlatList
@@ -339,7 +408,6 @@ export default function ManufacturerScreen({ navigation }) {
   );
 }
 
-//  Tarjeta de estadística
 function StatCard({ icon, label, value, color, colors }) {
   return (
     <View style={{
