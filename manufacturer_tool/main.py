@@ -738,7 +738,7 @@ class LoginFrame(ctk.CTkFrame):
         lbl(card_frame, "Solo usuarios con rol FABRICANTE pueden acceder.",
             font=FONT_SMALL, color=C["muted"]).pack(pady=(8, 0))
 
-        card_frame.bind_all("<Return>", lambda e: self._login())
+        self.winfo_toplevel().bind("<Return>", lambda e: self._login())
 
     def _login(self):
         ident = self.id_var.get().strip()
