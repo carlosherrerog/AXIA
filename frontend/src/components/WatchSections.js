@@ -131,12 +131,12 @@ export default function WatchSections({
           </TouchableOpacity>
 
           {walletAddress && (
-            <TouchableOpacity 
-              onPress={onOpenImportModal} 
+            <TouchableOpacity
+              onPress={onOpenImportModal}
               style={globalStyles.importButton}
             >
-              <Ionicons name="add-circle" size={20} color={colors.primary} style={{ marginRight: 4 }} />
-              <Text style={globalStyles.importText}>Importar</Text>
+              <Ionicons name="add-circle" size={20} color={colors.primary} style={{ marginRight: isMobile ? 0 : 4 }} />
+              {!isMobile && <Text style={globalStyles.importText}>Importar</Text>}
             </TouchableOpacity>
           )}
         </View>
@@ -310,38 +310,38 @@ export function MarketplaceWatchSection({ watches, navigation }) {
     <View>
       {/* ── Banner hero ── */}
       <View style={{
-        marginTop: 18, marginBottom: 14,
+        marginTop: isMobile ? 10 : 18, marginBottom: isMobile ? 10 : 14,
         backgroundColor: colors.backgroundAlt,
         borderRadius: 16, borderWidth: 1, borderColor: colors.border,
-        padding: 20,
+        padding: isMobile ? 14 : 20,
         ...(Platform.OS === 'web' && {
           background: `linear-gradient(135deg, ${colors.backgroundAlt} 0%, ${colors.surface} 100%)`,
         }),
       }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-          <Ionicons name="diamond-outline" size={20} color={colors.primary} style={{ marginRight: 8 }} />
-          <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: isMobile ? 4 : 8 }}>
+          <Ionicons name="diamond-outline" size={isMobile ? 14 : 20} color={colors.primary} style={{ marginRight: 6 }} />
+          <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' }}>
             Alta Relojería · Blockchain
           </Text>
         </View>
-        <Text style={{ color: colors.text, fontSize: 22, fontWeight: '700', letterSpacing: -0.3, marginBottom: 4 }}>
+        <Text style={{ color: colors.text, fontSize: isMobile ? 17 : 22, fontWeight: '700', letterSpacing: -0.3, marginBottom: 3 }}>
           Marketplace AXIA
         </Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20 }}>
+        <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
           {watches.length > 0
             ? `${watches.length} ${watches.length === 1 ? 'reloj certificado' : 'relojes certificados'} disponibles — autenticidad garantizada en blockchain`
             : 'Autenticidad garantizada en blockchain · Certificado NFC'}
         </Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 16 }}>
+        <View style={{ flexDirection: 'row', gap: isMobile ? 14 : 18, marginTop: isMobile ? 10 : 16 }}>
           {[
             { icon: 'shield-checkmark-outline', label: 'Verificados', value: watches.length },
             { icon: 'people-outline', label: 'Vendedores', value: [...new Set(watches.map(w => w.owner_id))].length },
             { icon: 'trending-up-outline', label: 'Subastas', value: watches.filter(w => w.auction_data).length },
           ].map(m => (
-            <View key={m.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <Ionicons name={m.icon} size={13} color={m.value > 0 ? colors.primaryLight : colors.textMuted} />
-              <Text style={{ color: m.value > 0 ? colors.primaryLight : colors.textMuted, fontWeight: '700', fontSize: 13 }}>{m.value}</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 12 }}>{m.label}</Text>
+            <View key={m.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name={m.icon} size={12} color={m.value > 0 ? colors.primaryLight : colors.textMuted} />
+              <Text style={{ color: m.value > 0 ? colors.primaryLight : colors.textMuted, fontWeight: '700', fontSize: 12 }}>{m.value}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 11 }}>{m.label}</Text>
             </View>
           ))}
         </View>

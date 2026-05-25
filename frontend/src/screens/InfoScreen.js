@@ -501,8 +501,8 @@ export default function InfoScreen({ navigation }) {
           <View style={{
             backgroundColor: colors.backgroundAlt,
             borderRadius: 24, borderWidth: 1, borderColor: colors.border,
-            padding: isDesktop ? 44 : 28,
-            marginBottom: 32, alignItems: 'center', overflow: 'hidden',
+            padding: isDesktop ? 44 : 20,
+            marginBottom: isDesktop ? 32 : 20, alignItems: 'center', overflow: 'hidden',
           }}>
             {/* Orbs decorativos */}
             <View style={{ position: 'absolute', width: 320, height: 320, borderRadius: 160, backgroundColor: '#8b5cf610', top: -100, right: -80 }} />
@@ -514,13 +514,15 @@ export default function InfoScreen({ navigation }) {
               <Image
                 source={require('../../assets/axia-icons/axia-logo-transparent.svg')}
                 style={{
-                  width: 260, height: 88, marginBottom: 20,
+                  width: isDesktop ? 260 : 180,
+                  height: isDesktop ? 88 : 62,
+                  marginBottom: isDesktop ? 20 : 14,
                   filter: 'drop-shadow(0 0 28px rgba(139,92,246,0.45))',
                 }}
                 resizeMode="contain"
               />
             ) : (
-              <Text style={{ color: colors.text, fontSize: 36, fontWeight: '900', letterSpacing: 8, marginBottom: 20 }}>
+              <Text style={{ color: colors.text, fontSize: 36, fontWeight: '900', letterSpacing: 8, marginBottom: 14 }}>
                 AXIA
               </Text>
             )}
@@ -528,32 +530,39 @@ export default function InfoScreen({ navigation }) {
             {/* Tagline */}
             <Text style={{
               color: colors.text,
-              fontSize: isDesktop ? 22 : 18,
+              fontSize: isDesktop ? 22 : 16,
               fontWeight: '800', textAlign: 'center',
-              letterSpacing: -0.5, marginBottom: 8,
+              letterSpacing: -0.5, marginBottom: 6,
             }}>
               El mercado de relojes de lujo, en la blockchain
             </Text>
-            <Text style={{
-              color: colors.textSecondary, fontSize: 14,
-              textAlign: 'center', lineHeight: 22,
-              maxWidth: 440, marginBottom: 28,
-            }}>
-              Cada pieza física vinculada a un gemelo digital único. Autenticidad inmutable, trazabilidad total, pagos seguros en USDC.
-            </Text>
+            {isDesktop && (
+              <Text style={{
+                color: colors.textSecondary, fontSize: 14,
+                textAlign: 'center', lineHeight: 22,
+                maxWidth: 440, marginBottom: 28,
+              }}>
+                Cada pieza física vinculada a un gemelo digital único. Autenticidad inmutable, trazabilidad total, pagos seguros en USDC.
+              </Text>
+            )}
 
             {/* Stats */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+            <View style={{
+              flexDirection: 'row', flexWrap: 'wrap', gap: isDesktop ? 10 : 8,
+              justifyContent: 'center', marginTop: isDesktop ? 0 : 14,
+            }}>
               {HERO_STATS.map(stat => (
                 <View key={stat.label} style={{
                   alignItems: 'center',
                   backgroundColor: stat.color + '12',
-                  borderRadius: 14, borderWidth: 1, borderColor: stat.color + '30',
-                  paddingHorizontal: 14, paddingVertical: 10, minWidth: 90,
+                  borderRadius: 12, borderWidth: 1, borderColor: stat.color + '30',
+                  paddingHorizontal: isDesktop ? 14 : 10,
+                  paddingVertical: isDesktop ? 10 : 8,
+                  minWidth: isDesktop ? 90 : 75,
                 }}>
-                  <Ionicons name={stat.icon} size={20} color={stat.color} style={{ marginBottom: 5 }} />
-                  <Text style={{ color: colors.text, fontSize: 12, fontWeight: '800' }}>{stat.label}</Text>
-                  <Text style={{ color: colors.textMuted, fontSize: 10, marginTop: 1, textAlign: 'center' }}>{stat.sub}</Text>
+                  <Ionicons name={stat.icon} size={isDesktop ? 20 : 16} color={stat.color} style={{ marginBottom: 4 }} />
+                  <Text style={{ color: colors.text, fontSize: isDesktop ? 12 : 11, fontWeight: '800' }}>{stat.label}</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 9, marginTop: 1, textAlign: 'center' }}>{stat.sub}</Text>
                 </View>
               ))}
             </View>
