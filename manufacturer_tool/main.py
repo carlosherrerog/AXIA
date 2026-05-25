@@ -10,6 +10,8 @@ warnings.filterwarnings('ignore', message='The log with transaction hash')
 import os
 import sys
 import json
+import math
+import platform
 import threading
 import requests
 from pathlib import Path
@@ -50,6 +52,22 @@ except ImportError:
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
+ICONS = {}  # {name: PhotoImage} — cargado en AxiaMfgApp.__init__
+
+def _load_icons():
+    global ICONS
+    if not PIL_AVAILABLE:
+        return
+    icons_dir = BUNDLE_DIR / "icons"
+    for name in ("logo", "mint", "stock", "settings", "wallet", "logout"):
+        path = icons_dir / f"{name}.png"
+        if path.exists():
+            try:
+                img = Image.open(path)
+                ICONS[name] = ImageTk.PhotoImage(img)
+            except Exception as e:
+                print(f"Icon load error ({name}): {e}")
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PALETA AXIA  (misma que frontend/src/themes/styles.js → darkColors)
@@ -71,12 +89,20 @@ C = {
     "gold":      "#d4a017",
 }
 
-FONT_TITLE  = ("Segoe UI", 22, "bold")
-FONT_HEAD   = ("Segoe UI", 14, "bold")
-FONT_SUBHEAD= ("Segoe UI", 12, "bold")
-FONT_BODY   = ("Segoe UI", 11)
-FONT_SMALL  = ("Segoe UI", 9)
-FONT_MONO   = ("Consolas", 10)
+_OS = platform.system()
+if _OS == "Windows":
+    _SANS, _MONO = "Segoe UI", "Consolas"
+elif _OS == "Darwin":
+    _SANS, _MONO = "Helvetica Neue", "Menlo"
+else:
+    _SANS, _MONO = "DejaVu Sans", "DejaVu Sans Mono"
+
+FONT_TITLE  = (_SANS, 20, "bold")
+FONT_HEAD   = (_SANS, 13, "bold")
+FONT_SUBHEAD= (_SANS, 11, "bold")
+FONT_BODY   = (_SANS, 10)
+FONT_SMALL  = (_SANS,  9)
+FONT_MONO   = (_MONO,  9)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -419,8 +445,20 @@ def _apply_scrollbar_style(root: tk.Tk):
         arrowcolor=[("active", C["text2"])],
     )
 
+_scroll_target = None  # canvas sobre el que está el ratón
+
+def _bind_scroll_to(widget, canvas):
+    """Propaga los eventos de scroll de widget y sus hijos al canvas dado."""
+    def _scroll(event):
+        canvas.yview_scroll(-1 if (event.num == 4 or event.delta > 0) else 1, "units")
+    widget.bind("<MouseWheel>", _scroll, add="+")
+    widget.bind("<Button-4>",   _scroll, add="+")
+    widget.bind("<Button-5>",   _scroll, add="+")
+    for child in widget.winfo_children():
+        _bind_scroll_to(child, canvas)
+
 def scrollable(parent):
-    """Devuelve (outer_frame, inner_frame) con scrollbar fina."""
+    """Devuelve (outer_frame, inner_frame) con scrollbar fina y scroll de ratón."""
     outer = tk.Frame(parent, bg=C["bg"])
     canvas = tk.Canvas(outer, bg=C["bg"], highlightthickness=0)
     vsb    = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview,
@@ -432,7 +470,11 @@ def scrollable(parent):
     inner = tk.Frame(canvas, bg=C["bg"])
     win   = canvas.create_window((0, 0), window=inner, anchor="nw")
 
-    inner.bind("<Configure>",  lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+    def _on_frame_configure(e):
+        canvas.configure(scrollregion=canvas.bbox("all"))
+        _bind_scroll_to(inner, canvas)
+
+    inner.bind("<Configure>",  _on_frame_configure)
     canvas.bind("<Configure>", lambda e: canvas.itemconfig(win, width=e.width))
 
     def _scroll(event):
@@ -679,10 +721,20 @@ class LoginFrame(tk.Frame):
         center = styled_frame(self, C["bg"])
         center.place(relx=0.5, rely=0.5, anchor="center")
 
-        tk.Label(center, text="⬡ AXIA", font=("Segoe UI", 32, "bold"),
-                 fg=C["primary"], bg=C["bg"]).pack(pady=(0, 4))
+        logo_row = tk.Frame(center, bg=C["bg"])
+        logo_row.pack(pady=(0, 4))
+        if "logo" in ICONS:
+            # Escalar el logo a 48x48 para el login
+            try:
+                img_big = Image.open(BUNDLE_DIR / "icons" / "logo.png").resize((48, 48), Image.LANCZOS)
+                ICONS["logo_big"] = ImageTk.PhotoImage(img_big)
+                tk.Label(logo_row, image=ICONS["logo_big"], bg=C["bg"]).pack(side="left", padx=(0, 10))
+            except Exception:
+                pass
+        tk.Label(logo_row, text="AXIA", font=(_SANS, 30, "bold"),
+                 fg=C["primary"], bg=C["bg"]).pack(side="left")
         tk.Label(center, text="Manufacturer Tool",
-                 font=("Segoe UI", 13), fg=C["text2"], bg=C["bg"]).pack(pady=(0, 28))
+                 font=(_SANS, 12), fg=C["text2"], bg=C["bg"]).pack(pady=(0, 28))
 
         card = styled_frame(center, C["bg_alt"])
         card.configure(highlightthickness=1, highlightbackground=C["border"])
@@ -761,29 +813,39 @@ class MainFrame(tk.Frame):
         self.header.pack(fill="x", side="top")
         self.header.pack_propagate(False)
 
-        tk.Label(self.header, text="⬡ AXIA  Manufacturer",
-                 font=FONT_HEAD, fg=C["primary"], bg=C["bg_alt"]
-                 ).pack(side="left", padx=20)
+        # Logo + título
+        logo_frame = tk.Frame(self.header, bg=C["bg_alt"])
+        logo_frame.pack(side="left", padx=(16, 0))
+        if "logo" in ICONS:
+            tk.Label(logo_frame, image=ICONS["logo"], bg=C["bg_alt"]).pack(side="left", padx=(0, 8))
+        tk.Label(logo_frame, text="AXIA", font=(_SANS, 15, "bold"),
+                 fg=C["primary"], bg=C["bg_alt"]).pack(side="left")
+        tk.Label(logo_frame, text=" Manufacturer", font=(_SANS, 13),
+                 fg=C["text2"], bg=C["bg_alt"]).pack(side="left")
 
         user_info = api.user or {}
-        tk.Label(self.header, text=user_info.get("username", ""),
-                 font=FONT_BODY, fg=C["text"], bg=C["bg_alt"]
-                 ).pack(side="left", padx=(6, 0))
+        if user_info.get("username"):
+            tk.Frame(self.header, bg=C["border"], width=1).pack(side="left", fill="y", padx=14, pady=10)
+            tk.Label(self.header, text=user_info.get("username", ""),
+                     font=FONT_BODY, fg=C["text"], bg=C["bg_alt"]
+                     ).pack(side="left")
 
-        # Chip de red: muestra entorno activo
-        api_host = get_cfg("API_URL").replace("https://", "").replace("http://", "").split("/")[0]
+        # Chip de red
+        api_host  = get_cfg("API_URL").replace("https://", "").replace("http://", "").split("/")[0]
         net_color = C["success"] if "onrender.com" in get_cfg("API_URL") else C["warning"]
         net_frame = tk.Frame(self.header, bg=C["bg_alt"])
-        net_frame.pack(side="left", padx=16)
+        net_frame.pack(side="left", padx=14)
         tk.Label(net_frame, text="●", font=FONT_SMALL, fg=net_color, bg=C["bg_alt"]).pack(side="left")
-        tk.Label(net_frame, text=f" Amoy · {api_host}", font=FONT_SMALL,
+        tk.Label(net_frame, text=f"  Amoy · {api_host}", font=FONT_SMALL,
                  fg=C["text2"], bg=C["bg_alt"]).pack(side="left")
 
         # Cerrar sesión (derecha)
-        tk.Button(self.header, text="Cerrar sesión", font=FONT_SMALL,
-                  fg=C["error"], bg=C["bg_alt"],
+        logout_kw = dict(image=ICONS["logout"]) if "logout" in ICONS else {}
+        tk.Button(self.header, text=" Salir", compound="left",
+                  font=FONT_SMALL, fg=C["error"], bg=C["bg_alt"],
                   activeforeground=C["error"], activebackground=C["surface"],
-                  relief="flat", cursor="hand2", command=self.on_logout
+                  relief="flat", cursor="hand2", command=self.on_logout,
+                  **logout_kw
                   ).pack(side="right", padx=16)
 
         # Chip de wallet
@@ -798,25 +860,28 @@ class MainFrame(tk.Frame):
         body.pack(fill="both", expand=True)
 
         # Sidebar
-        self.sidebar = tk.Frame(body, bg=C["bg_alt"], width=185)
+        self.sidebar = tk.Frame(body, bg=C["bg_alt"], width=210)
         self.sidebar.pack(fill="y", side="left")
         self.sidebar.pack_propagate(False)
         separator(self.sidebar, C["border"]).pack(fill="x")
 
         self._nav_buttons = {}
-        for key, label, icon in [
-            ("mint",     "Mintear Reloj",  "⬡"),
-            ("stock",    "Mi Stock",       "▣"),
-            ("settings", "Configuración",  "⚙"),
+        for key, label, icon_key in [
+            ("mint",     "Mintear Reloj",  "mint"),
+            ("stock",    "Mi Stock",       "stock"),
+            ("settings", "Configuración",  "settings"),
         ]:
-            btn = tk.Button(self.sidebar, text=f"  {icon}  {label}",
+            img = ICONS.get(icon_key)
+            btn = tk.Button(self.sidebar,
+                            text=f"   {label}",
+                            image=img, compound="left" if img else "none",
                             font=FONT_BODY, anchor="w",
                             fg=C["text"], bg=C["bg_alt"],
                             activeforeground=C["primary"],
                             activebackground=C["surface2"],
                             relief="flat", cursor="hand2",
                             command=lambda k=key: self.show_tab(k))
-            btn.pack(fill="x", ipady=11)
+            btn.pack(fill="x", ipady=12)
             separator(self.sidebar, C["border"]).pack(fill="x")
             self._nav_buttons[key] = btn
 
@@ -857,6 +922,8 @@ class MainFrame(tk.Frame):
             color    = C["warning"] if mismatch else C["success"]
             pill     = tk.Frame(self.wallet_container, bg=C["bg_alt"])
             pill.pack(side="left")
+            if "wallet" in ICONS:
+                tk.Label(pill, image=ICONS["wallet"], bg=C["bg_alt"]).pack(side="left", padx=(0, 4))
             tk.Label(pill, text="●", font=FONT_SMALL, fg=color,
                      bg=C["bg_alt"]).pack(side="left")
             tk.Label(pill, text=f" {short}", font=FONT_MONO,
@@ -867,11 +934,11 @@ class MainFrame(tk.Frame):
                       relief="flat", cursor="hand2",
                       command=self._open_connect_dialog).pack(side="left")
             if mismatch:
-                tk.Label(self.wallet_container, text="⚠ no coincide",
+                tk.Label(self.wallet_container, text="  ⚠ no coincide",
                          font=FONT_SMALL, fg=C["warning"],
-                         bg=C["bg_alt"]).pack(side="left", padx=(6, 0))
+                         bg=C["bg_alt"]).pack(side="left")
         else:
-            tk.Label(self.wallet_container, text="⚠ sin wallet",
+            tk.Label(self.wallet_container, text="Sin wallet",
                      font=FONT_SMALL, fg=C["warning"], bg=C["bg_alt"]
                      ).pack(side="left", padx=(0, 6))
             styled_button(self.wallet_container, "Conectar wallet",
@@ -1456,6 +1523,7 @@ class AxiaMfgApp(tk.Tk):
             except Exception:
                 pass
 
+        _load_icons()
         self._current_frame = None
         self.show_login()
 
