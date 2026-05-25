@@ -33,6 +33,7 @@ export default function WatchSections({
   const [activeTab, setActiveTab] = useState('collection');
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
+  const hPad = width >= 768 ? Math.round(width * 0.03) : 16;
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   // Lógica de rotación del mini-reloj
@@ -68,7 +69,7 @@ export default function WatchSections({
   return (
     <View style={{ marginBottom: 30 }}>
       {/* BARRA DE PESTAÑAS */}
-      <View style={globalStyles.tabBar}>
+      <View style={[globalStyles.tabBar, { marginHorizontal: hPad, borderBottomWidth: 0 }]}>
 
         {/* LADO IZQUIERDO: Pestañas */}
         <View style={{ flexDirection: 'row' }}>
@@ -143,7 +144,7 @@ export default function WatchSections({
       </View>
 
       {/* CONTENIDO DE LAS PESTAÑAS */}
-      <View style={{ paddingHorizontal: 20 }}>
+      <View style={{ paddingHorizontal: hPad }}>
         {activeTab === 'collection' && (
           myNfts.length === 0 ? (
             <View style={userStyles.emptyCard}>
@@ -406,11 +407,13 @@ export function MarketplaceWatchSection({ watches, navigation }) {
         <Text style={{ color: colors.text, fontSize: isMobile ? 17 : 22, fontWeight: '700', letterSpacing: -0.3, marginBottom: 3 }}>
           Marketplace AXIA
         </Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
-          {watches.length > 0
-            ? `${watches.length} ${watches.length === 1 ? 'reloj certificado' : 'relojes certificados'} disponibles — autenticidad garantizada en blockchain`
-            : 'Autenticidad garantizada en blockchain · Certificado NFC'}
-        </Text>
+        {!isMobile && (
+          <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
+            {watches.length > 0
+              ? `${watches.length} ${watches.length === 1 ? 'reloj certificado' : 'relojes certificados'} disponibles — autenticidad garantizada en blockchain`
+              : 'Autenticidad garantizada en blockchain · Certificado NFC'}
+          </Text>
+        )}
         <View style={{ flexDirection: 'row', gap: isMobile ? 14 : 18, marginTop: isMobile ? 10 : 16 }}>
           {[
             { icon: 'shield-checkmark-outline', label: 'Verificados', value: watches.length },
