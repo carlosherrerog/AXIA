@@ -162,27 +162,13 @@ PRIVATE_KEY=
 # Claves de tu cuenta Pinata (https://app.pinata.cloud/developers/api-keys)
 PINATA_API_KEY=
 PINATA_SECRET_KEY=
-
-# Clave maestra AES-128 para proteger escritura en chips NFC NTAG 424 DNA
-# 32 caracteres hexadecimales = 16 bytes AES-128
-# Genera una con: python -c "import secrets; print(secrets.token_hex(16))"
-NFC_MASTER_KEY=
 """
 
 def _bootstrap_env():
-    """Crea un .env pre-configurado en el primer arranque si no existe.
-    Si NFC_MASTER_KEY está vacía (chip virgen o .env heredado), la genera
-    automáticamente con secrets.token_hex(16) y la persiste."""
-    import secrets as _secrets
+    """Crea un .env pre-configurado en el primer arranque si no existe."""
     if not ENV_FILE.exists():
         ENV_FILE.write_text(ENV_TEMPLATE.format(**DEFAULTS), encoding="utf-8")
         load_dotenv(ENV_FILE)
-    # Generar NFC_MASTER_KEY si todavía está vacía
-    load_dotenv(ENV_FILE, override=False)
-    if not os.getenv("NFC_MASTER_KEY", "").strip():
-        new_key = _secrets.token_hex(16)  # 32 hex chars = 16 bytes AES-128
-        set_key(str(ENV_FILE), "NFC_MASTER_KEY", new_key)
-        os.environ["NFC_MASTER_KEY"] = new_key
 
 _bootstrap_env()
 
@@ -533,6 +519,24 @@ def write_ndef_url(token_id: int) -> None:
         conn.disconnect()
 
 
+# ── Clave NFC derivada de la PRIVATE_KEY ──────────────────────────────────────
+
+def _derive_nfc_key() -> bytes:
+    """
+    Deriva la clave maestra AES-128 del chip NFC a partir de la PRIVATE_KEY
+    del fabricante usando keccak256. Determinista: misma wallet → misma clave.
+    No almacena nada extra; se calcula en el momento en que se necesita.
+    """
+    pk = os.getenv("PRIVATE_KEY", "").strip()
+    if not pk:
+        raise ValueError("PRIVATE_KEY no configurada. Conéctala en Configuración antes de mintear.")
+    if not WEB3_AVAILABLE:
+        raise RuntimeError("web3.py no disponible.")
+    pk_hex = pk[2:] if pk.startswith("0x") else pk
+    digest = Web3().keccak(hexstr=pk_hex)  # bytes32
+    return bytes(digest[:16])              # primeros 16 bytes → clave AES-128
+
+
 # ── Autenticación AES-128 EV2 y bloqueo de escritura ──────────────────────────
 
 def _aes_cbc(key: bytes, iv: bytes, data: bytes, encrypt: bool) -> bytes:
@@ -629,31 +633,21 @@ def _compute_mac(session_mac_key: bytes, ins: int, cmd_ctr: int,
     return bytes([full_mac[i] for i in range(1, 16, 2)])  # 8 bytes
 
 
-def lock_nfc_chip(master_key_hex: str = None) -> None:
+def lock_nfc_chip() -> None:
     """
     Protege el chip NTAG 424 DNA contra escritura no autorizada.
 
     Secuencia:
-      1. AuthEV2First con master key actual (por defecto: 00*16 en chip virgen)
+      1. AuthEV2First con Key 0 = 00*16 (valor de fábrica en chip virgen)
       2. ChangeFileSettings: restringe Write del fichero NDEF a Key 0
-      3. ChangeKey: cambia Key 0 a NFC_MASTER_KEY del .env
+      3. ChangeKey: cambia Key 0 a keccak256(PRIVATE_KEY)[:16]
 
     Tras esto, UPDATE BINARY sin autenticación devuelve SW 6982.
     Leer (escanear con el móvil) sigue siendo libre.
-
-    'master_key_hex': si se omite, usa NFC_MASTER_KEY del .env.
-                      Para chip recién salido de fábrica usar "0"*32.
+    La nueva clave es determinista: misma wallet → misma clave NFC.
     """
-    if master_key_hex is None:
-        master_key_hex = get_cfg("NFC_MASTER_KEY", "").strip() or ("00" * 16)
-    current_key = bytes.fromhex(master_key_hex.zfill(32))
-
-    new_key_hex = get_cfg("NFC_MASTER_KEY", "").strip()
-    if not new_key_hex or len(new_key_hex) != 32:
-        raise ValueError(
-            "NFC_MASTER_KEY no configurada o inválida. "
-            "Debe ser 32 caracteres hex (16 bytes AES-128).")
-    new_key = bytes.fromhex(new_key_hex)
+    current_key = bytes(16)        # chip virgen: Key 0 = 00*16
+    new_key     = _derive_nfc_key()
 
     conn = _nfc_open_connection()
     try:
@@ -1530,16 +1524,13 @@ class MintTab(tk.Frame):
                 except Exception as e_nfc:
                     self._log(f"⚠  NDEF: {e_nfc}\n   El reloj está minteado. Puedes programar la tarjeta manualmente.", C["warning"])
 
-            # 6. Bloquear escritura del chip (requiere NFC_MASTER_KEY en .env)
-            nfc_key = get_cfg("NFC_MASTER_KEY", "").strip()
-            if NFC_AVAILABLE and len(nfc_key) == 32:
+            # 6. Bloquear escritura del chip (usa keccak256(PRIVATE_KEY)[:16])
+            if NFC_AVAILABLE:
                 try:
-                    lock_nfc_chip(master_key_hex="00" * 16)  # chip virgen: clave 00*16
-                    self._log(f"✓  Chip bloqueado — escritura protegida con NFC_MASTER_KEY.", C["success"])
+                    lock_nfc_chip()
+                    self._log(f"✓  Chip bloqueado — escritura protegida con clave derivada de tu wallet.", C["success"])
                 except Exception as e_lock:
                     self._log(f"⚠  Bloqueo: {e_lock}\n   La URL está escrita. El bloqueo puede hacerse después.", C["warning"])
-            elif NFC_AVAILABLE:
-                self._log("⚠  NFC_MASTER_KEY no configurada — chip no bloqueado (escritura libre).", C["warning"])
 
             self._log(
                 f"✓  Reloj registrado con éxito.\n"
@@ -1766,32 +1757,6 @@ class SettingsTab(tk.Frame):
         tk.Label(wallet_card,
                  text="Se deriva automáticamente de tu PRIVATE_KEY.\n"
                       "Debe coincidir con la wallet que vinculaste en la web/app AXIA.",
-                 font=FONT_SMALL, fg=C["muted"], bg=C["surface"],
-                 wraplength=600, justify="left").pack(anchor="w", pady=(6, 0))
-
-        # Clave NFC — solo lectura, generada automáticamente al arrancar
-        section_label(inner, "Clave NFC del chip (NFC_MASTER_KEY)")
-        nfc_card = card_frame(inner)
-        nfc_key_val = get_cfg("NFC_MASTER_KEY", "")
-        nfc_key_var = tk.StringVar(value=nfc_key_val)
-        nfc_row = tk.Frame(nfc_card, bg=C["surface"])
-        nfc_row.pack(fill="x", pady=(0, 4))
-        nfc_entry = tk.Entry(nfc_row, textvariable=nfc_key_var, font=FONT_MONO,
-                             fg=C["success"], bg=C["surface"], relief="flat",
-                             highlightthickness=1, highlightbackground=C["border"],
-                             state="readonly", width=36)
-        nfc_entry.pack(side="left", fill="x", expand=True)
-        def _copy_nfc_key():
-            self.clipboard_clear()
-            self.clipboard_append(nfc_key_var.get())
-        tk.Button(nfc_row, text="Copiar", font=FONT_SMALL,
-                  fg=C["text2"], bg=C["surface2"],
-                  activeforeground=C["primary"], activebackground=C["surface"],
-                  relief="flat", cursor="hand2", padx=8,
-                  command=_copy_nfc_key).pack(side="left", padx=(6, 0))
-        tk.Label(nfc_card,
-                 text="Generada automáticamente al arrancar la app. Guárdala en un lugar seguro.\n"
-                      "Sin esta clave no podrás reprogramar chips ya bloqueados.",
                  font=FONT_SMALL, fg=C["muted"], bg=C["surface"],
                  wraplength=600, justify="left").pack(anchor="w", pady=(6, 0))
 
