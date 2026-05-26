@@ -419,6 +419,15 @@ export default function NFCPassportScreen({ route, navigation }) {
                         </View>
                         <Ionicons name="copy-outline" size={12} color={colors.textMuted} />
                       </TouchableOpacity>
+                      {ownerData.id && (
+                        <TouchableOpacity
+                          onPress={() => navigation.navigate('PublicProfile', { userId: ownerData.id })}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 4 }}
+                        >
+                          <Text style={{ color: colors.textMuted, fontSize: 12 }}>Ver perfil</Text>
+                          <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                 </View>
@@ -719,10 +728,18 @@ export default function NFCPassportScreen({ route, navigation }) {
                   <Ionicons name="copy-outline" size={12} color={colors.primaryLight} />
                 </TouchableOpacity>
               </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Token ID</Text>
                 <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>#{tokenId}</Text>
               </View>
+              <TouchableOpacity
+                onPress={() => { const url = `${POLYGONSCAN_BASE}/token/${NFT_ADDRESS}?a=${tokenId}`; if (Platform.OS === 'web') window.open(url, '_blank'); }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}
+              >
+                <Ionicons name="open-outline" size={13} color={colors.textMuted} />
+                <Text style={{ color: colors.textMuted, fontSize: 12 }}>Ver en Polygonscan</Text>
+                <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
+              </TouchableOpacity>
             </View>
           </View>
         )}
