@@ -15,6 +15,7 @@ const MARKETPLACE_ADDRESS        = process.env.EXPO_PUBLIC_MARKETPLACE_ADDRESS  
 const AUCTION_ADDRESS            = process.env.EXPO_PUBLIC_AUCTION_ADDRESS             || '0x701EAa91aeB8588694B116C004D1EaAC7f55F2F2';
 const USDC_ADDRESS               = process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS       || '0x967187957d31d0912aE57cad1B51F764339AaEe6';
 const SIGNATURE_VERIFIER_ADDRESS = process.env.EXPO_PUBLIC_SIGNATURE_VERIFIER_ADDRESS  || '0x57057749e6aF1b21070FA2A4e5D4359AA2711735';
+const POLYGONSCAN_BASE           = 'https://amoy.polygonscan.com';
 
 // ABIs necesarios
 const USDC_ABI = [
@@ -526,19 +527,14 @@ export default function PublicWatchScreen({ route, navigation }) {
                             </TouchableOpacity>
                           </View>
 
-                          {/* Botón ver perfil */}
+                          {/* Ver perfil */}
                           {!isManufacturer && (
                             <TouchableOpacity
                               onPress={() => navigation.navigate('PublicProfile', { userId: watchData.owner_id })}
-                              style={{
-                                flexDirection: 'row', alignItems: 'center', gap: 4,
-                                backgroundColor: colors.background, borderWidth: 1,
-                                borderColor: colors.border, borderRadius: 8,
-                                paddingHorizontal: 10, paddingVertical: 6,
-                              }}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 2, paddingLeft: 4 }}
                             >
-                              <Ionicons name="person-outline" size={13} color={colors.textMuted} />
-                              <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '500' }}>Perfil</Text>
+                              <Text style={{ color: colors.textMuted, fontSize: 12 }}>Ver perfil</Text>
+                              <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
                             </TouchableOpacity>
                           )}
                         </View>
@@ -820,17 +816,25 @@ export default function PublicWatchScreen({ route, navigation }) {
               <View style={{ marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Contrato NFT</Text>
-                  <TouchableOpacity onPress={() => Clipboard.setStringAsync(NFT_ADDRESS)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                    <Text style={{ color: colors.primaryLight, fontSize: 11, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined, textAlign: 'right' }}>
-                      {NFT_ADDRESS || '—'}
+                  <TouchableOpacity onPress={() => Clipboard.setStringAsync(NFT_ADDRESS)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Text style={{ color: colors.primaryLight, fontSize: 11, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }}>
+                      {NFT_ADDRESS ? `${NFT_ADDRESS.slice(0, 10)}…${NFT_ADDRESS.slice(-8)}` : '—'}
                     </Text>
                     <Ionicons name="copy-outline" size={12} color={colors.primaryLight} />
                   </TouchableOpacity>
                 </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Token ID</Text>
                   <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>#{watchId}</Text>
                 </View>
+                <TouchableOpacity
+                  onPress={() => { const url = `${POLYGONSCAN_BASE}/token/${NFT_ADDRESS}?a=${watchId}`; if (Platform.OS === 'web') window.open(url, '_blank'); }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}
+                >
+                  <Ionicons name="open-outline" size={13} color={colors.textMuted} />
+                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>Ver en Polygonscan</Text>
+                  <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
+                </TouchableOpacity>
               </View>
             </View>
           )}
