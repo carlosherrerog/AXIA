@@ -1735,10 +1735,21 @@ class StockTab(tk.Frame):
             watches = api.get_stock()
             self.after(0, lambda: self._render(watches))
         except Exception as e:
-            self.after(0, lambda msg=str(e): self.status_label.config(
-                text=f"Error: {msg}", fg=C["error"]))
+            self.after(0, lambda msg=str(e): self._safe_status(f"Error: {msg}", C["error"]))
+
+    def _safe_status(self, text, fg):
+        try:
+            if self.status_label.winfo_exists():
+                self.status_label.config(text=text, fg=fg)
+        except Exception:
+            pass
 
     def _render(self, watches):
+        try:
+            if not self.status_label.winfo_exists():
+                return
+        except Exception:
+            return
         self.status_label.config(text="")
         for w in self.list_frame.winfo_children():
             w.destroy()
