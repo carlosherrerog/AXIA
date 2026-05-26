@@ -353,7 +353,7 @@ def nfc_redirect(token_id: int, db: Session = Depends(database.get_db)):
     watch = db.query(models.Watch).filter(models.Watch.token_id == token_id).first()
     if not watch:
         raise HTTPException(status_code=404, detail="Reloj no encontrado")
-    return RedirectResponse(url=f"{FRONTEND_URL}/watch/{token_id}")
+    return RedirectResponse(url=f"{FRONTEND_URL}/nfc-scan/{token_id}")
 
 @app.post("/register", response_model=user_schemas.UserResponse)
 @limiter.limit("5/minute")
