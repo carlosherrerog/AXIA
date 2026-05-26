@@ -7,6 +7,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from '@react-navigation/native';
+import { ethers } from 'ethers';
 import api, { getToken, WS_URL } from '../api/api';
 import GlobalHeader from '../components/GlobalHeader';
 import WatchCard from '../components/WatchCard';
@@ -32,22 +33,48 @@ export default function ManufacturerScreen({ navigation }) {
 
   const [loggedUser, setLoggedUser]   = useState(getStoredUser);
   const [watches, setWatches]         = useState([]);
-  const [mintedCount, setMintedCount] = useState(0);
   const [loading, setLoading]         = useState(true);
   const [refreshing, setRefreshing]   = useState(false);
   const [activeTab, setActiveTab]     = useState('all');
   const [infoExpanded, setInfoExpanded] = useState(false);
+  const [usdcBalance, setUsdcBalance] = useState(null);
+  const [polBalance,  setPolBalance]  = useState(null);
+
+  const fmt = (v, dec = 2) =>
+    Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: dec });
+
+  const fetchWalletBalances = useCallback(async (address) => {
+    if (!address) return;
+    try {
+      const provider = new ethers.JsonRpcProvider('https://rpc-amoy.polygon.technology');
+      const pol = await provider.getBalance(address);
+      setPolBalance(fmt(ethers.formatEther(pol), 4));
+      const usdcAddress = process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS || '0x967187957d31d0912aE57cad1B51F764339AaEe6';
+      const contract = new ethers.Contract(
+        usdcAddress,
+        ['function balanceOf(address) view returns (uint256)'],
+        provider,
+      );
+      const usdc = await contract.balanceOf(address);
+      setUsdcBalance(fmt(ethers.formatUnits(usdc, 6), 2));
+    } catch (e) {
+      console.error('Manufacturer wallet balance error:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (loggedUser?.wallet_address) fetchWalletBalances(loggedUser.wallet_address);
+    else { setUsdcBalance(null); setPolBalance(null); }
+  }, [loggedUser?.wallet_address, fetchWalletBalances]);
 
   const fetchData = useCallback(async () => {
     try {
-      const [userRes, watchRes, countRes] = await Promise.all([
+      const [userRes, watchRes] = await Promise.all([
         api.get('/users/me'),
         api.get('/nfts/my-collection'),
-        api.get('/nfts/minted-count'),
       ]);
       setLoggedUser(userRes.data);
       setWatches(watchRes.data.filter(w => !w.is_buyer));
-      setMintedCount(countRes.data.count);
     } catch (e) {
       console.error('Error cargando dashboard fabricante:', e);
     } finally {
@@ -114,9 +141,8 @@ export default function ManufacturerScreen({ navigation }) {
     return () => ws?.close();
   }, [loggedUser?.id, fetchData]);
 
-  const stock   = watches.filter(w => !w.is_listed && w.marketplace_state < 2 && w.security_state !== 4);
-  const listed  = watches.filter(w => w.is_listed || w.marketplace_state >= 2);
-  const altered = watches.filter(w => w.security_state === 4);
+  const stock  = watches.filter(w => !w.is_listed && w.marketplace_state < 2 && w.security_state !== 4);
+  const listed = watches.filter(w => w.is_listed || w.marketplace_state >= 2);
 
   const filteredWatches = activeTab === 'stock'  ? stock
                         : activeTab === 'listed' ? listed
@@ -173,12 +199,37 @@ export default function ManufacturerScreen({ navigation }) {
             ) : null}
           </View>
 
-          {/* Tarjetas de estadísticas */}
+          {/* Tarjetas de estadísticas + saldos */}
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-            <StatCard icon="cube-outline"     label="En Stock"       value={stock.length}   color="#10b981"             colors={colors} />
-            <StatCard icon="pricetag-outline" label="En Venta"       value={listed.length}  color={colors.primary}      colors={colors} />
-            <StatCard icon="warning-outline"  label="Alterados"      value={altered.length} color="#f43f5e"             colors={colors} />
-            <StatCard icon="layers-outline"   label="Total Mintados" value={mintedCount}    color={colors.primaryLight} colors={colors} />
+            <StatCard icon="cube-outline"     label="En Stock" value={stock.length}  color="#10b981"        colors={colors} />
+            <StatCard icon="pricetag-outline" label="En Venta" value={listed.length} color={colors.primary} colors={colors} />
+
+            {/* Saldos USDC + POL */}
+            {loggedUser?.wallet_address && (
+              <View style={{
+                flex: 1, minWidth: 180,
+                flexDirection: 'row', gap: 0,
+                backgroundColor: colors.surface, borderRadius: 12,
+                borderWidth: 1, borderColor: colors.border,
+                overflow: 'hidden',
+              }}>
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, padding: 14 }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 9, fontWeight: '700', letterSpacing: 0.8 }}>USDC</Text>
+                  <Text style={{ color: '#22c55e', fontSize: 20, fontWeight: '800', letterSpacing: -0.5 }}>
+                    {usdcBalance ?? '—'}
+                  </Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 9 }}>USD Coin</Text>
+                </View>
+                <View style={{ width: 1, backgroundColor: colors.border }} />
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, padding: 14 }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 9, fontWeight: '700', letterSpacing: 0.8 }}>POL</Text>
+                  <Text style={{ color: '#4ade80', fontSize: 20, fontWeight: '800', letterSpacing: -0.5 }}>
+                    {polBalance ?? '—'}
+                  </Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 9 }}>Gas · Polygon</Text>
+                </View>
+              </View>
+            )}
           </View>
 
           {/* Sección: configuración de la herramienta */}
