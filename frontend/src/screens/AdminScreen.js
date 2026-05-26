@@ -161,13 +161,35 @@ function MarketplaceCard({ paused, loading, onToggle, logisticsStatus, copiedLog
   const active = !paused;
   const statusColor = active ? '#10b981' : '#f43f5e';
 
-  const [editLogistics,   setEditLogistics]   = useState(false);
-  const [editAuction,     setEditAuction]     = useState(false);
-  const [logisticsDraft,  setLogisticsDraft]  = useState('');
-  const [auctionDraft,    setAuctionDraft]    = useState('');
-  const [savingL,         setSavingL]         = useState(false);
-  const [savingA,         setSavingA]         = useState(false);
-  const [alertL,          setAlertL]          = useState(null);
+  const [editLogistics,        setEditLogistics]        = useState(false);
+  const [editAuction,          setEditAuction]          = useState(false);
+  const [logisticsDraft,       setLogisticsDraft]       = useState('');
+  const [auctionDraft,         setAuctionDraft]         = useState('');
+  const [savingL,              setSavingL]              = useState(false);
+  const [savingA,              setSavingA]              = useState(false);
+  const [alertL,               setAlertL]               = useState(null);
+  const [logisticsPolBalance,  setLogisticsPolBalance]  = useState(null);
+  const [auctionPolBalance,    setAuctionPolBalance]    = useState(null);
+
+  useEffect(() => {
+    if (!logisticsStatus) return;
+    const fetchBalances = async () => {
+      try {
+        const provider = new ethers.JsonRpcProvider('https://rpc-amoy.polygon.technology');
+        if (logisticsStatus.address) {
+          const bal = await provider.getBalance(logisticsStatus.address);
+          setLogisticsPolBalance(Number(ethers.formatEther(bal)).toFixed(4));
+        }
+        if (logisticsStatus.auction_address) {
+          const bal = await provider.getBalance(logisticsStatus.auction_address);
+          setAuctionPolBalance(Number(ethers.formatEther(bal)).toFixed(4));
+        }
+      } catch (e) {
+        console.error('System balance fetch error:', e);
+      }
+    };
+    fetchBalances();
+  }, [logisticsStatus?.address, logisticsStatus?.auction_address]);
   const [alertA,          setAlertA]          = useState(null);
 
   const handleSaveLogistics = async () => {
@@ -256,12 +278,40 @@ function MarketplaceCard({ paused, loading, onToggle, logisticsStatus, copiedLog
         </View>
       )}
 
-      {!editing && label === 'Sistema Logístico' && logisticsStatus?.balance_eth === 0 && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6,
-          backgroundColor: 'rgba(244,63,94,0.07)', borderRadius: 7, padding: 7, marginTop: 6,
-          borderWidth: 1, borderColor: 'rgba(244,63,94,0.18)' }}>
-          <Ionicons name="warning-outline" size={11} color="#f43f5e" />
-          <Text style={{ color: '#f43f5e', fontSize: 11 }}>Sin fondos — las transacciones pueden fallar</Text>
+      {!editing && label === 'Sistema Logístico' && logisticsPolBalance !== null && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 4,
+            backgroundColor: logisticsPolBalance === '0.0000' ? 'rgba(244,63,94,0.08)' : 'rgba(74,222,128,0.08)',
+            borderRadius: 7, paddingHorizontal: 8, paddingVertical: 5,
+            borderWidth: 1, borderColor: logisticsPolBalance === '0.0000' ? 'rgba(244,63,94,0.25)' : 'rgba(74,222,128,0.25)',
+          }}>
+            <Ionicons
+              name={logisticsPolBalance === '0.0000' ? 'warning-outline' : 'flash-outline'}
+              size={11}
+              color={logisticsPolBalance === '0.0000' ? '#f43f5e' : '#4ade80'}
+            />
+            <Text style={{ color: logisticsPolBalance === '0.0000' ? '#f43f5e' : '#4ade80', fontSize: 11, fontWeight: '700' }}>
+              {logisticsPolBalance === '0.0000'
+                ? 'Sin fondos — las transacciones pueden fallar'
+                : `${logisticsPolBalance} POL`}
+            </Text>
+          </View>
+        </View>
+      )}
+      {!editing && label === 'Contrato Subastas' && auctionPolBalance !== null && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 4,
+            backgroundColor: 'rgba(74,222,128,0.08)',
+            borderRadius: 7, paddingHorizontal: 8, paddingVertical: 5,
+            borderWidth: 1, borderColor: 'rgba(74,222,128,0.25)',
+          }}>
+            <Ionicons name="flash-outline" size={11} color="#4ade80" />
+            <Text style={{ color: '#4ade80', fontSize: 11, fontWeight: '700' }}>
+              {auctionPolBalance} POL
+            </Text>
+          </View>
         </View>
       )}
     </View>
