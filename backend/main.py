@@ -736,9 +736,21 @@ def verify_signature(auth: user_schemas.AuthVerify, db: Session = Depends(databa
 @app.post("/auth/disconnect")
 def disconnect_wallet(db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
     try:
+        wallet = current_user.wallet_address
+        professional_roles = [r for r in (current_user.roles or []) if r in ("FABRICANTE", "DEALER", "RELOJERO")]
+
         current_user.wallet_address = None
         db.commit()
         db.refresh(current_user)
+
+        # Revocar roles profesionales en el smart contract
+        if wallet:
+            for role in professional_roles:
+                try:
+                    blockchain.set_blockchain_role(wallet, role, False)
+                except Exception as e:
+                    print(f"[wallet_disconnect] No se pudo revocar {role} en blockchain: {e}")
+
         return current_user
     except Exception as e:
         db.rollback()
