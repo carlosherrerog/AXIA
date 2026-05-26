@@ -197,6 +197,22 @@ export default function ManufacturerScreen({ navigation }) {
                 {loggedUser.username}
               </Text>
             ) : null}
+            {loggedUser?.wallet_address && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                <TouchableOpacity
+                  onPress={() => Linking.openURL(`https://amoy.polygonscan.com/address/${loggedUser.wallet_address}`)}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 5,
+                    backgroundColor: '#8b5cf610', borderRadius: 8,
+                    paddingHorizontal: 10, paddingVertical: 6,
+                    borderWidth: 1, borderColor: '#8b5cf625',
+                  }}
+                >
+                  <Ionicons name="open-outline" size={12} color="#8b5cf6" />
+                  <Text style={{ color: '#8b5cf6', fontSize: 11, fontWeight: '700' }}>Polygonscan</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           {/* Tarjetas de estadísticas + saldos */}
