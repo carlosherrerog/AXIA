@@ -27,6 +27,7 @@ import ConfiguracionScreen       from './src/screens/ConfiguracionScreen';
 import SaleScreen                from './src/screens/SaleScreen';
 import InfoScreen                from './src/screens/InfoScreen';
 import AuctionScreen             from './src/screens/AuctionScreen';
+import NFCPassportScreen         from './src/screens/NFCPassportScreen';
 
 const navigationRef = createNavigationContainerRef();
 const Stack = createNativeStackNavigator();
@@ -132,6 +133,7 @@ function UserDashboard() {
               <Stack.Screen name="Perfil"              component={UserScreens} />
               <Stack.Screen name="WatchScreen"         component={WatchScreen} />
               <Stack.Screen name="PublicWatch"         component={PublicWatchScreen} />
+              <Stack.Screen name="NFCPassport"         component={NFCPassportScreen} />
               <Stack.Screen name="AuctionScreen"       component={AuctionScreen} />
               <Stack.Screen name="PublicProfile"       component={PublicProfileScreen} />
               <Stack.Screen name="ProfessionalRequest" component={ProfessionalRequestScreen} />
@@ -182,6 +184,7 @@ function PublicDashboard() {
               <Stack.Screen name="Marketplace"   component={HomeScreen} />
               <Stack.Screen name="Subastas"      component={AuctionsScreen} />
               <Stack.Screen name="PublicWatch"   component={PublicWatchScreen} />
+              <Stack.Screen name="NFCPassport"   component={NFCPassportScreen} />
               <Stack.Screen name="AuctionScreen" component={AuctionScreen} />
               <Stack.Screen name="PublicProfile" component={PublicProfileScreen} />
               <Stack.Screen name="Info"          component={InfoScreen} />
@@ -207,6 +210,7 @@ function WatchmakerDashboard() {
       <View style={{ flex: 1, width: '100%', paddingBottom: Platform.select({ ios: 110, android: 100, web: 0 }) }}>
         <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
           <Stack.Screen name="WatchmakerScreen" component={WatchmakerScreen} />
+          <Stack.Screen name="NFCPassport"      component={NFCPassportScreen} />
           <Stack.Screen name="Notificaciones"   component={NotificationsScreen} />
           <Stack.Screen name="SaleScreen"       component={SaleScreen} />
           <Stack.Screen name="Configuracion"    component={ConfiguracionScreen} />
@@ -225,6 +229,7 @@ function ManufacturerDashboard() {
         <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
           <Stack.Screen name="ManufacturerScreen" component={ManufacturerScreen} />
           <Stack.Screen name="WatchScreen"        component={WatchScreen} />
+          <Stack.Screen name="NFCPassport"        component={NFCPassportScreen} />
           <Stack.Screen name="Notificaciones"     component={NotificationsScreen} />
           <Stack.Screen name="SaleScreen"         component={SaleScreen} />
           <Stack.Screen name="Configuracion"      component={ConfiguracionScreen} />
@@ -246,6 +251,7 @@ const linking = {
           Marketplace: 'marketplace',
           Subastas: 'auctions',
           PublicWatch: 'watch/:watchId',
+          NFCPassport: 'nfc-scan/:tokenId',
           AuctionScreen: 'auction/:tokenId',
         },
       },
