@@ -24,7 +24,13 @@
       "edgeToEdgeEnabled": true
     },
     "web": {
-      "favicon": "./assets/axia-icons/icono-AXIA.png"
+      "favicon": "./assets/axia-icons/icono-AXIA.png",
+      "display": "standalone",
+      "themeColor": "#8b5cf6",
+      "backgroundColor": "#0d0d0d",
+      "name": "AXIA",
+      "shortName": "AXIA",
+      "description": "Ecosistema blockchain para relojería de lujo"
     },
     "plugins": [
       "expo-secure-store"

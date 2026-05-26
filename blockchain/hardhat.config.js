@@ -36,6 +36,16 @@ module.exports = {
 
   etherscan: {
     apiKey: POLYGONSCAN_API_KEY || "",
+    customChains: [
+      {
+        network: "amoy",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://api-amoy.polygonscan.com/api",
+          browserURL: "https://amoy.polygonscan.com",
+        },
+      },
+    ],
   },
 
   gasReporter: {
