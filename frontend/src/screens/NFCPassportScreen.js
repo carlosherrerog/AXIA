@@ -418,7 +418,7 @@ export default function NFCPassportScreen({ route, navigation }) {
             <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 5, marginBottom: 15 }} />
 
             <Text style={watchScreenStyles.sectionTitle}>
-              {watchData?.brand ? `${watchData.brand} ${watchData.model}` : watchData?.model || 'Modelo'}
+              {watchData?.model || 'Modelo'}
             </Text>
 
             <View style={watchScreenStyles.detailRow}>
@@ -468,9 +468,9 @@ export default function NFCPassportScreen({ route, navigation }) {
 
             <View style={[watchScreenStyles.detailRow, { alignItems: 'flex-start' }]}>
               <Text style={watchScreenStyles.detailLabel}>Dirección del contrato:</Text>
-              <TouchableOpacity onPress={() => Clipboard.setStringAsync(NFT_ADDRESS)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                <Text style={{ color: colors.primaryLight, fontSize: 12, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined, textAlign: 'right' }}>
-                  {NFT_ADDRESS || '0x...'}
+              <TouchableOpacity onPress={() => Clipboard.setStringAsync(NFT_ADDRESS)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ color: colors.primaryLight, fontSize: 12, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }}>
+                  {NFT_ADDRESS ? `${NFT_ADDRESS.slice(0, 10)}…${NFT_ADDRESS.slice(-8)}` : '0x...'}
                 </Text>
                 <Ionicons name="copy-outline" size={14} color={colors.primaryLight} />
               </TouchableOpacity>
@@ -506,10 +506,10 @@ export default function NFCPassportScreen({ route, navigation }) {
         {activeTab === 'history' && (
           <View style={watchScreenStyles.contentCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18, gap: 10 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primary + '20', alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primary + '20', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Ionicons name="time" size={18} color={colors.primary} />
               </View>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700' }}>Historial On-Chain</Text>
                 <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 1 }}>Registro inmutable de transferencias, verificaciones y cambios</Text>
               </View>
@@ -706,9 +706,9 @@ export default function NFCPassportScreen({ route, navigation }) {
             <View style={{ marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Contrato NFT</Text>
-                <TouchableOpacity onPress={() => Clipboard.setStringAsync(NFT_ADDRESS)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                  <Text style={{ color: colors.primaryLight, fontSize: 11, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined, textAlign: 'right' }}>
-                    {NFT_ADDRESS || '—'}
+                <TouchableOpacity onPress={() => Clipboard.setStringAsync(NFT_ADDRESS)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={{ color: colors.primaryLight, fontSize: 11, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }}>
+                    {NFT_ADDRESS ? `${NFT_ADDRESS.slice(0, 10)}…${NFT_ADDRESS.slice(-8)}` : '—'}
                   </Text>
                   <Ionicons name="copy-outline" size={12} color={colors.primaryLight} />
                 </TouchableOpacity>

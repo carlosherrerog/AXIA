@@ -105,12 +105,14 @@ function UserDashboard() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
   const [activeTab, setActiveTab] = useState('Marketplace');
+  const [hideBar, setHideBar] = useState(false);
 
   useEffect(() => {
     const unsubscribe = navigationRef.addListener('state', () => {
       const route = navigationRef.getCurrentRoute();
       if (!route) return;
       const { name } = route;
+      setHideBar(name === 'NFCPassport');
       if (['Marketplace', 'Subastas', 'Info'].includes(name)) setActiveTab(name);
       else if (['Perfil', 'ProfessionalRequest', 'Configuracion'].includes(name)) setActiveTab('Perfil');
     });
@@ -143,7 +145,7 @@ function UserDashboard() {
               <Stack.Screen name="Info"                component={InfoScreen} />
             </Stack.Navigator>
           </View>
-          {!isDesktop && (
+          {!isDesktop && !hideBar && (
             <MobileBottomBar
               activeTab={activeTab}
               onTabPress={handleTabPress}
@@ -161,11 +163,14 @@ function PublicDashboard() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
   const [activeTab, setActiveTab] = useState('Marketplace');
+  const [hideBar, setHideBar] = useState(false);
 
   useEffect(() => {
     const unsubscribe = navigationRef.addListener('state', () => {
       const route = navigationRef.getCurrentRoute();
-      if (route && ['Marketplace', 'Subastas', 'Info'].includes(route.name)) setActiveTab(route.name);
+      if (!route) return;
+      setHideBar(route.name === 'NFCPassport');
+      if (['Marketplace', 'Subastas', 'Info'].includes(route.name)) setActiveTab(route.name);
     });
     return unsubscribe;
   }, []);
@@ -190,7 +195,7 @@ function PublicDashboard() {
               <Stack.Screen name="Info"          component={InfoScreen} />
             </Stack.Navigator>
           </View>
-          {!isDesktop && (
+          {!isDesktop && !hideBar && (
             <MobileBottomBar
               activeTab={activeTab}
               onTabPress={handleTabPress}
