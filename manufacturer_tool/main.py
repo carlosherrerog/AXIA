@@ -873,9 +873,45 @@ class ConnectWalletDialog(tk.Toplevel):
         pk = self.pk_var.get().strip()
         if pk and not pk.startswith("0x"):
             pk = "0x" + pk
-        save_cfg("PRIVATE_KEY", pk)
-        self.result = pk
-        self.destroy()
+
+        self.ok_btn.config(state="disabled", text="Verificando…")
+        self.warn_var.set("")
+
+        def do_check():
+            try:
+                addr = Web3().eth.account.from_key(pk).address
+            except Exception:
+                self.after(0, lambda: (
+                    self.warn_var.set("⚠  Clave privada inválida."),
+                    self.ok_btn.config(state="normal", text="Vincular")
+                ))
+                return
+
+            try:
+                user = api.get_user_by_wallet(addr)
+            except Exception:
+                user = None
+
+            if not user:
+                self.after(0, lambda: (
+                    self.warn_var.set("⚠  Esta wallet no está registrada en AXIA.\n"
+                                      "   Crea una cuenta y solicita el rol FABRICANTE primero."),
+                    self.ok_btn.config(state="normal", text="Vincular")
+                ))
+                return
+
+            if "FABRICANTE" not in (user.get("roles") or []):
+                self.after(0, lambda: (
+                    self.warn_var.set("⚠  Esta wallet no tiene el rol FABRICANTE en AXIA."),
+                    self.ok_btn.config(state="normal", text="Vincular")
+                ))
+                return
+
+            save_cfg("PRIVATE_KEY", pk)
+            self.result = pk
+            self.after(0, self.destroy)
+
+        threading.Thread(target=do_check, daemon=True).start()
 
 
 class AssignDialog(tk.Toplevel):
