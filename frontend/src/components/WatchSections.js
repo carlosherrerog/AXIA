@@ -34,6 +34,13 @@ export default function WatchSections({
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const hPad = width >= 768 ? Math.max(24, Math.floor((width - MAX_CONTENT_WIDTH) / 2)) : 16;
+  const contentW = width - 2 * hPad;
+  const colGap = 16;
+  let cols = 2;
+  if (contentW >= 1100) cols = 5;
+  else if (contentW >= 850) cols = 4;
+  else if (contentW >= 620) cols = 3;
+  const cardW = Math.floor((contentW - (cols - 1) * colGap) / cols);
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   // Lógica de rotación del mini-reloj
@@ -154,9 +161,9 @@ export default function WatchSections({
               </Text>
             </View>
           ) : (
-            <View style={globalStyles.grid}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: colGap, paddingTop: 12, paddingBottom: 12, overflow: 'visible' }}>
               {myNfts.map((nft) => (
-                <View key={nft.id} style={{ width: 210, overflow: 'visible', marginTop: 12, marginLeft: 12, marginBottom: 10 }}>
+                <View key={nft.id} style={{ width: cardW, overflow: 'visible' }}>
                   {nft.is_auction && nft.auction_data ? (
                     <AuctionCard
                       navigation={navigation}
@@ -193,9 +200,9 @@ export default function WatchSections({
               <Text style={userStyles.emptyText}>No tienes relojes en venta actualmente.</Text>
             </View>
           ) : (
-            <View style={globalStyles.grid}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: colGap, paddingTop: 12, paddingBottom: 12, overflow: 'visible' }}>
               {listedNfts.map((nft) => (
-                <View key={nft.id} style={{ width: 200, overflow: 'visible', marginTop: 12, marginLeft: 12, marginBottom: 10 }}>
+                <View key={nft.id} style={{ width: cardW, overflow: 'visible' }}>
                   <WatchCard
                     nft={nft}
                     removeNFT={removeNFT}

@@ -23,9 +23,6 @@ export default function WatchCard({ nft, removeNFT, navigation, isAdminView = fa
   const [shipResultMsg, setShipResultMsg] = useState({ title: '', message: '', isError: false });
   const [deliveryConfirmVisible, setDeliveryConfirmVisible] = useState(false);
 
-  const handleHoverIn  = () => setIsHovered(true);
-  const handleHoverOut = () => setIsHovered(false);
-
   const handlePressCard = () => {
     if (!walletConnected) return;
     if (isEscrowed && !nft.is_reverification) {
@@ -40,17 +37,13 @@ export default function WatchCard({ nft, removeNFT, navigation, isAdminView = fa
 
   const toggleMenu = () => setShowMenu(!showMenu);
 
-  // Detectamos los estados
+  // Estados
   const isStolen  = nft.security_state === 1;
   const isLost    = nft.security_state === 2;
   const isAltered = nft.security_state === 4;
-  const isEscrowed = nft.marketplace_state >= 2 && nft.marketplace_state < 5; // 2-4 activo, 5 = completado
+  const isEscrowed = nft.marketplace_state >= 2 && nft.marketplace_state < 5;
 
-  // Sub-estados del Escrow para el vendedor
   const isWaitingShipment = nft.marketplace_state === 2;
-
-  // Vista del comprador: puede confirmar entrega cuando el relojero aprobó (P2P estado 4)
-  // o cuando es Dealer y el reloj está enviado (estado 3, is_p2p=false)
   const isBuyerView = nft.is_buyer === true;
   const canConfirmDelivery = isBuyerView && (
     nft.marketplace_state === 4 ||
@@ -61,38 +54,45 @@ export default function WatchCard({ nft, removeNFT, navigation, isAdminView = fa
   const escrowColor  = '#f59e0b';
   const alteredColor = '#f97316';
 
-  const cardBg = isStolen  ? `${alertColors.error}0D`
-               : isLost    ? `${lostColor}0D`
-               : isAltered ? `${alteredColor}12`
-               : isEscrowed ? `${escrowColor}15`
-               : nft.is_listed ? '#1a1040'
-               : colors.backgroundAlt;
-
-  const cardBorder = isStolen  ? alertColors.error
-                   : isLost    ? lostColor
-                   : isAltered ? alteredColor
+  const cardBorder = isStolen   ? alertColors.error
+                   : isLost     ? lostColor
+                   : isAltered  ? alteredColor
                    : isEscrowed ? escrowColor
                    : nft.is_listed ? colors.primary
                    : colors.border;
 
-  const cardBorderW = isStolen || isLost || isAltered || nft.is_listed || isEscrowed ? 1.5 : 1;
-
-  const shadowColorDinamic = isStolen  ? alertColors.error
-                           : isLost    ? lostColor
-                           : isAltered ? alteredColor
-                           : isEscrowed ? escrowColor
-                           : colors.primary;
-
-  const glowOpacity = isHovered ? 0.55 : (nft.is_listed || isStolen || isLost || isAltered || isEscrowed) ? 0.3 : 0.15;
-
-  // Mostrar menú si: NO es admin Y (vendedor esperando envío | propietario en stock | comprador pendiente de confirmar)
   const canShowMenu = !isAdminView && (
     (isWaitingShipment && !isBuyerView) ||
     (!nft.is_listed && !isEscrowed) ||
     canConfirmDelivery
   );
 
-  // Función para que el vendedor confirme el envío al relojero
+  // Badge de estado (único, igual que PublicWatchCard)
+  const statusLabel = isStolen   ? { text: 'ROBADO',    color: alertColors.error, icon: 'warning' }
+                    : isLost     ? { text: 'PERDIDO',   color: lostColor,         icon: 'help-circle' }
+                    : isAltered  ? { text: 'ALTERADO',  color: alteredColor,      icon: 'alert-circle' }
+                    : isEscrowed ? { text: 'RESERVADO', color: escrowColor,       icon: 'lock-closed' }
+                    : nft.is_listed ? { text: 'EN VENTA', color: colors.primary,  icon: 'pricetag' }
+                    : null;
+
+  // Etiqueta de estado escrow detallado (banner inferior imagen)
+  const escrowIcon = nft.is_reverification ? 'refresh-circle-outline'
+    : canConfirmDelivery ? 'cube-outline'
+    : !isBuyerView && !nft.is_p2p ? 'cube-outline'
+    : nft.marketplace_state === 3 && nft.is_p2p ? 'search-outline'
+    : 'time-outline';
+
+  const escrowLabel = nft.is_reverification ? 'Pendiente de restauración'
+    : canConfirmDelivery ? 'Confirmar recibo'
+    : !isBuyerView && !nft.is_p2p && nft.marketplace_state >= 3 ? 'Esperando confirmación del cliente'
+    : nft.marketplace_state === 2 ? 'Esperando envío'
+    : nft.marketplace_state === 3 && nft.is_p2p ? 'En peritaje'
+    : 'Esperando confirmación';
+
+  const displayPrice = nft.price ? Number(nft.price) / 1_000_000 : 0;
+  const tokenId = nft.id || nft.token_id;
+
+  // Acciones
   const doConfirmShipment = async () => {
     setShipConfirmVisible(false);
     try {
@@ -113,7 +113,6 @@ export default function WatchCard({ nft, removeNFT, navigation, isAdminView = fa
     }
   };
 
-  // Comprador confirma la recepción: primero muestra modal de confirmación
   const handleConfirmDelivery = () => {
     setShowMenu(false);
     setDeliveryConfirmVisible(true);
@@ -141,7 +140,6 @@ export default function WatchCard({ nft, removeNFT, navigation, isAdminView = fa
       } catch (blockchainErr) {
         if (blockchainErr?.code === 'ACTION_REJECTED') throw blockchainErr;
         blockchainWarning = true;
-        console.warn('[CONFIRM DELIVERY] blockchain no-fatal:', blockchainErr?.message);
       }
 
       setMetaMaskLoading(false);
@@ -171,146 +169,119 @@ export default function WatchCard({ nft, removeNFT, navigation, isAdminView = fa
 
   return (
     <Pressable
-      onHoverIn={Platform.OS === 'web' ? handleHoverIn : null}
-      onHoverOut={Platform.OS === 'web' ? handleHoverOut : null}
+      onHoverIn={Platform.OS === 'web' ? () => setIsHovered(true) : null}
+      onHoverOut={Platform.OS === 'web' ? () => setIsHovered(false) : null}
       onPress={handlePressCard}
-      style={[
-        watchCardStyles.card,
-        {
-          backgroundColor: cardBg,
-          borderWidth: cardBorderW,
-          borderColor: cardBorder,
-          borderRadius: 14,
-          shadowColor: shadowColorDinamic,
-          shadowOpacity: glowOpacity,
-          shadowRadius: isHovered ? 16 : 8,
-          elevation: isHovered ? 10 : 4,
-          opacity: isEscrowed ? 0.85 : 1, 
-          transform: [{ scale: (isHovered && walletConnected) ? 1.04 : 1 }],
-          transition: Platform.OS === 'web' ? 'all 0.2s ease-in-out' : undefined,
-          cursor: Platform.OS === 'web' ? (walletConnected ? 'pointer' : 'default') : 'auto',
-          zIndex: showMenu ? 10 : 1,
-          height: 300,
-          display: 'flex',
-          flexDirection: 'column',
-        },
-      ]}
+      style={{
+        borderRadius: 12,
+        overflow: 'hidden',
+        borderWidth: 1.5,
+        borderColor: isHovered ? colors.primary : cardBorder,
+        backgroundColor: colors.backgroundAlt,
+        opacity: (isEscrowed && !isAltered) ? 0.85 : 1,
+        zIndex: showMenu ? 10 : 1,
+        ...(Platform.OS === 'web' && {
+          transition: 'all 0.18s ease',
+          cursor: walletConnected ? 'pointer' : 'default',
+          boxShadow: isHovered ? `0 4px 20px ${colors.primary}55` : '0 1px 6px rgba(0,0,0,0.25)',
+        }),
+      }}
     >
-      <View style={{ position: 'relative' }}>
-        
-        {/* ETIQUETA DINÁMICA DE ESTADO */}
-        {!isEscrowed && nft.is_listed && !isStolen && !isLost && (
+      {/* Imagen cuadrada */}
+      <View style={{ width: '100%', aspectRatio: 1, backgroundColor: colors.surface, position: 'relative' }}>
+        <Image
+          source={{ uri: resolveImageUri(nft.image) || 'https://via.placeholder.com/150' }}
+          style={{
+            width: '100%', height: '100%',
+            opacity: (isEscrowed || !walletConnected) ? 0.4 : isAltered ? 0.55 : 1,
+          }}
+          resizeMode="contain"
+        />
+
+        {/* Overlay tinte naranja para alterado */}
+        {isAltered && (
           <View style={{
-            position: 'absolute', top: 10, left: 10, zIndex: 10,
-            backgroundColor: colors.primary,
-            paddingHorizontal: 8, paddingVertical: 4,
-            borderRadius: 20, flexDirection: 'row', alignItems: 'center',
-            shadowColor: colors.primary, shadowOpacity: 0.6, shadowRadius: 6,
-          }}>
-            <Ionicons name="pricetag" size={11} color="#FFF" style={{ marginRight: 4 }} />
-            <Text style={{ color: '#FFF', fontSize: 10, fontWeight: 'bold', letterSpacing: 0.5 }}>EN VENTA</Text>
-          </View>
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: `${alteredColor}18`,
+            pointerEvents: 'none',
+          }} />
         )}
 
-        {(isStolen || isLost || isAltered) && !isEscrowed && (
+        {/* Badge de estado (esquina superior izquierda) */}
+        {statusLabel && (
           <View style={{
-            position: 'absolute', top: 10, left: 10, zIndex: 10,
-            backgroundColor: isStolen ? alertColors.error : isAltered ? alteredColor : lostColor,
-            paddingHorizontal: 8, paddingVertical: 4,
-            borderRadius: 20, flexDirection: 'row', alignItems: 'center',
-            shadowColor: isStolen ? alertColors.error : isAltered ? alteredColor : lostColor,
-            shadowOpacity: 0.6, shadowRadius: 6,
+            position: 'absolute', top: 7, left: 7,
+            backgroundColor: statusLabel.color,
+            paddingHorizontal: 6, paddingVertical: 2,
+            borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 3,
           }}>
-            <Ionicons
-              name={isStolen ? 'warning' : isAltered ? 'alert-circle' : 'help-circle'}
-              size={11} color="#FFF" style={{ marginRight: 4 }}
-            />
-            <Text style={{ color: '#FFF', fontSize: 10, fontWeight: 'bold', letterSpacing: 0.5 }}>
-              {isStolen ? 'ROBADO' : isAltered ? 'ALTERADO' : 'PERDIDO'}
+            <Ionicons name={statusLabel.icon} size={9} color="#FFF" />
+            <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.3 }}>
+              {statusLabel.text}
             </Text>
           </View>
         )}
 
-        {/* BOTÓN DE 3 PUNTOS */}
+        {/* Botón de 3 puntos (esquina superior derecha) */}
         {canShowMenu && walletConnected && (
-          <TouchableOpacity 
-            style={[watchCardStyles.menuButton, { zIndex: 20, backgroundColor: isWaitingShipment ? escrowColor : undefined }]} 
+          <TouchableOpacity
+            style={[watchCardStyles.menuButton, {
+              backgroundColor: isWaitingShipment ? escrowColor : 'rgba(24,24,27,0.92)',
+            }]}
             onPress={toggleMenu}
             disabled={isShipping}
           >
             {isShipping ? (
               <ActivityIndicator size="small" color="#FFF" />
             ) : (
-              <Ionicons name="ellipsis-vertical" size={18} color={isWaitingShipment ? '#FFF' : '#a78bfa'} />
+              <Ionicons name="ellipsis-vertical" size={16} color={isWaitingShipment ? '#FFF' : '#a78bfa'} />
             )}
           </TouchableOpacity>
         )}
 
-        {/* MENÚ DESPLEGABLE */}
+        {/* Menú desplegable */}
         {showMenu && canShowMenu && (
           <>
             <Pressable
               style={{
                 position: Platform.OS === 'web' ? 'fixed' : 'absolute',
-                top:    Platform.OS === 'web' ? 0 : -2000,
+                top: Platform.OS === 'web' ? 0 : -2000,
                 bottom: Platform.OS === 'web' ? 0 : -2000,
-                left:   Platform.OS === 'web' ? 0 : -2000,
-                right:  Platform.OS === 'web' ? 0 : -2000,
+                left: Platform.OS === 'web' ? 0 : -2000,
+                right: Platform.OS === 'web' ? 0 : -2000,
                 zIndex: 25,
               }}
               onPress={() => setShowMenu(false)}
             />
             <View style={[watchCardStyles.dropdownMenu, { zIndex: 30 }]}>
-              
-              {/* Comprador: solo opción de confirmar recibo */}
               {canConfirmDelivery ? (
                 <Pressable
-                  style={({ hovered }) => [
-                    watchCardStyles.menuItem,
-                    { borderBottomWidth: 0 },
-                    hovered && { backgroundColor: 'rgba(16, 185, 129, 0.12)' },
-                  ]}
+                  style={({ hovered }) => [watchCardStyles.menuItem, { borderBottomWidth: 0 }, hovered && { backgroundColor: 'rgba(16,185,129,0.12)' }]}
                   onPress={handleConfirmDelivery}
                 >
                   <Ionicons name="checkmark-circle-outline" size={16} color="#10b981" style={{ marginRight: 8 }} />
                   <Text style={{ color: '#10b981', fontWeight: '500' }}>Confirmar recibo de reloj</Text>
                 </Pressable>
               ) : isWaitingShipment ? (
-                /* Vendedor esperando enviar */
                 <Pressable
-                  style={({ hovered }) => [
-                    watchCardStyles.menuItem,
-                    { borderBottomWidth: 0 },
-                    hovered && { backgroundColor: 'rgba(245, 158, 11, 0.12)' },
-                  ]}
+                  style={({ hovered }) => [watchCardStyles.menuItem, { borderBottomWidth: 0 }, hovered && { backgroundColor: 'rgba(245,158,11,0.12)' }]}
                   onPress={() => { setShowMenu(false); setShipConfirmVisible(true); }}
                 >
                   <Ionicons name="airplane-outline" size={16} color="#f59e0b" style={{ marginRight: 8 }} />
                   <Text style={{ color: '#f59e0b', fontWeight: '500' }}>Confirmar Envío</Text>
                 </Pressable>
               ) : isAltered ? (
-                /* Menú para reloj alterado: solo certificación y ocultar */
                 <>
                   <Pressable
-                    style={({ hovered }) => [
-                      watchCardStyles.menuItem,
-                      hovered && { backgroundColor: 'rgba(249, 115, 22, 0.12)' },
-                    ]}
-                    onPress={() => {
-                      setShowMenu(false);
-                      navigation.navigate('WatchScreen', { watchId: nft.id, initialTab: 'security' });
-                    }}
+                    style={({ hovered }) => [watchCardStyles.menuItem, hovered && { backgroundColor: 'rgba(249,115,22,0.12)' }]}
+                    onPress={() => { setShowMenu(false); navigation.navigate('WatchScreen', { watchId: nft.id, initialTab: 'security' }); }}
                   >
                     <Ionicons name="refresh-circle-outline" size={16} color={alteredColor} style={{ marginRight: 8 }} />
                     <Text style={{ color: alteredColor, fontWeight: '500' }}>Solicitar certificación</Text>
                   </Pressable>
                   {!isManufacturer && (
                     <Pressable
-                      style={({ hovered }) => [
-                        watchCardStyles.menuItem,
-                        { borderBottomWidth: 0 },
-                        hovered && { backgroundColor: 'rgba(244, 63, 94, 0.12)' },
-                      ]}
+                      style={({ hovered }) => [watchCardStyles.menuItem, { borderBottomWidth: 0 }, hovered && { backgroundColor: 'rgba(244,63,94,0.12)' }]}
                       onPress={() => { setShowMenu(false); removeNFT(nft.id); }}
                     >
                       <Ionicons name="eye-off-outline" size={16} color="#f43f5e" style={{ marginRight: 8 }} />
@@ -319,63 +290,37 @@ export default function WatchCard({ nft, removeNFT, navigation, isAdminView = fa
                   )}
                 </>
               ) : (
-                /* Menú normal de propietario (no escrowed) */
                 <>
                   {!isStolen && !isLost && (
                     <Pressable
-                      style={({ hovered }) => [
-                        watchCardStyles.menuItem,
-                        hovered && { backgroundColor: 'rgba(16, 185, 129, 0.12)' },
-                      ]}
-                      onPress={() => {
-                        setShowMenu(false);
-                        navigation.navigate('WatchScreen', { watchId: nft.id, initialTab: 'sell' });
-                      }}
+                      style={({ hovered }) => [watchCardStyles.menuItem, hovered && { backgroundColor: 'rgba(16,185,129,0.12)' }]}
+                      onPress={() => { setShowMenu(false); navigation.navigate('WatchScreen', { watchId: nft.id, initialTab: 'sell' }); }}
                     >
                       <Ionicons name="pricetag-outline" size={16} color="#10b981" style={{ marginRight: 8 }} />
                       <Text style={{ color: '#10b981', fontWeight: '500' }}>Vender</Text>
                     </Pressable>
                   )}
-
                   {!isStolen && !isLost && (
                     <Pressable
-                      style={({ hovered }) => [
-                        watchCardStyles.menuItem,
-                        hovered && { backgroundColor: 'rgba(168, 85, 247, 0.12)' },
-                      ]}
-                      onPress={() => {
-                        setShowMenu(false);
-                        navigation.navigate('WatchScreen', { watchId: nft.id, initialTab: 'transfer' });
-                      }}
+                      style={({ hovered }) => [watchCardStyles.menuItem, hovered && { backgroundColor: 'rgba(168,85,247,0.12)' }]}
+                      onPress={() => { setShowMenu(false); navigation.navigate('WatchScreen', { watchId: nft.id, initialTab: 'transfer' }); }}
                     >
                       <Ionicons name="paper-plane-outline" size={16} color={colors.primaryLight} style={{ marginRight: 8 }} />
                       <Text style={{ color: colors.primaryLight, fontWeight: '500' }}>Transferir</Text>
                     </Pressable>
                   )}
-
                   {(isStolen || isLost) && (
                     <Pressable
-                      style={({ hovered }) => [
-                        watchCardStyles.menuItem,
-                        hovered && { backgroundColor: 'rgba(16, 185, 129, 0.12)' },
-                      ]}
-                      onPress={() => {
-                        setShowMenu(false);
-                        navigation.navigate('WatchScreen', { watchId: nft.id, initialTab: 'security' });
-                      }}
+                      style={({ hovered }) => [watchCardStyles.menuItem, hovered && { backgroundColor: 'rgba(16,185,129,0.12)' }]}
+                      onPress={() => { setShowMenu(false); navigation.navigate('WatchScreen', { watchId: nft.id, initialTab: 'security' }); }}
                     >
                       <Ionicons name="shield-checkmark-outline" size={16} color="#10b981" style={{ marginRight: 8 }} />
                       <Text style={{ color: '#10b981', fontWeight: '500' }}>Declarar seguro</Text>
                     </Pressable>
                   )}
-
                   {!isManufacturer && (
                     <Pressable
-                      style={({ hovered }) => [
-                        watchCardStyles.menuItem,
-                        { borderBottomWidth: 0 },
-                        hovered && { backgroundColor: 'rgba(244, 63, 94, 0.12)' },
-                      ]}
+                      style={({ hovered }) => [watchCardStyles.menuItem, { borderBottomWidth: 0 }, hovered && { backgroundColor: 'rgba(244,63,94,0.12)' }]}
                       onPress={() => { setShowMenu(false); removeNFT(nft.id); }}
                     >
                       <Ionicons name="eye-off-outline" size={16} color="#f43f5e" style={{ marginRight: 8 }} />
@@ -388,142 +333,61 @@ export default function WatchCard({ nft, removeNFT, navigation, isAdminView = fa
           </>
         )}
 
-        {/* IMAGE */}
-        <Image
-          source={{ uri: resolveImageUri(nft.image) || 'https://via.placeholder.com/150' }}
-          style={[
-            watchCardStyles.image,
-            {
-              borderTopLeftRadius: 12,
-              borderTopRightRadius: 12,
-              backgroundColor: colors.surface,
-            },
-            (isEscrowed || !walletConnected) && { opacity: 0.4 },
-            isAltered && { opacity: 0.55 },
-          ]}
-          resizeMode="cover"
-        />
-        {/* Overlay alterado: tinte naranja sobre la imagen */}
-        {isAltered && (
-          <View style={{
-            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-            borderTopLeftRadius: 12, borderTopRightRadius: 12,
-            backgroundColor: `${alteredColor}18`,
-            pointerEvents: 'none',
-          }} />
-        )}
-
-        {/* ── OVERLAY: WALLET NO CONECTADA  */}
+        {/* Overlay wallet no conectada */}
         {!walletConnected && (
           <View style={{
             position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
             backgroundColor: 'rgba(13,13,26,0.72)',
-            borderTopLeftRadius: 12, borderTopRightRadius: 12,
             justifyContent: 'center', alignItems: 'center',
             paddingHorizontal: 12,
           }}>
-            <Ionicons name="wallet-outline" size={28} color="#a78bfa" />
-            <Text style={{
-              color: '#e2d9f3', fontSize: 11, fontWeight: '600',
-              textAlign: 'center', marginTop: 6, lineHeight: 16,
-            }}>
-              Conecta tu wallet para interactuar con tus relojes
+            <Ionicons name="wallet-outline" size={24} color="#a78bfa" />
+            <Text style={{ color: '#e2d9f3', fontSize: 10, fontWeight: '600', textAlign: 'center', marginTop: 5, lineHeight: 14 }}>
+              Conecta tu wallet para interactuar
             </Text>
           </View>
         )}
 
-        {/* BANNER DE ESTADO ESCROW (sobre la imagen)*/}
-        {isEscrowed && walletConnected && (() => {
-          const iconName = nft.is_reverification ? 'refresh-circle-outline'
-            : canConfirmDelivery ? 'cube-outline'
-            : !isBuyerView && !nft.is_p2p ? 'cube-outline'
-            : nft.marketplace_state === 3 && nft.is_p2p ? 'search-outline'
-            : 'time-outline';
-          const label = nft.is_reverification ? 'Pendiente de restauración'
-            : canConfirmDelivery ? 'Confirmar recibo'
-            : !isBuyerView && !nft.is_p2p && nft.marketplace_state >= 3 ? 'Esperando confirmación del cliente'
-            : nft.marketplace_state === 2 ? 'Esperando envío'
-            : nft.marketplace_state === 3 && nft.is_p2p ? 'En peritaje'
-            : 'Esperando confirmación';
-          return (
-            <View style={{
-              position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10,
-              backgroundColor: 'rgba(69, 31, 0, 0.82)',
-              borderTopWidth: 1, borderTopColor: '#f59e0b55',
-              paddingVertical: 8, paddingHorizontal: 12,
-              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-              ...(Platform.OS === 'web' && { backdropFilter: 'blur(10px)' }),
-            }}>
-              <Ionicons name={iconName} size={13} color="#f59e0b" />
-              <Text style={{ color: '#f59e0b', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>
-                {label}
-              </Text>
-            </View>
-          );
-        })()}
-      </View>
-
-      {/*  INFO  */}
-      <View style={{ 
-        paddingHorizontal: 10, 
-        paddingBottom: 12, 
-        marginTop: 10,
-        flex: 1, // Ocupa todo el espacio restante
-        justifyContent: 'space-between' // Brand/Model/ID arriba, Precio abajo
-      }}>
-        {/* Contenedor para Brand, Model e ID (se mantienen juntos arriba) */}
-        <View>
-          <Text style={[watchCardStyles.brandText, { color: '#ffffff' }]} numberOfLines={1}>
-            {nft.brand}
-          </Text>
-          <Text
-            style={[
-              watchCardStyles.modelText,
-              { color: isStolen ? alertColors.error : isLost ? lostColor : isAltered ? alteredColor : isEscrowed ? escrowColor : colors.textSecondary },
-            ]}
-            numberOfLines={2}
-          >
-            {nft.model}
-          </Text>
-
+        {/* Banner escrow detallado (parte inferior de la imagen) */}
+        {isEscrowed && walletConnected && (
           <View style={{
-            alignSelf: 'flex-start',
-            marginTop: 8,
-            backgroundColor: '#10b98118',
-            borderWidth: 1, borderColor: '#10b98150',
-            borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3,
+            position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10,
+            backgroundColor: 'rgba(69,31,0,0.88)',
+            borderTopWidth: 1, borderTopColor: '#f59e0b55',
+            paddingVertical: 6, paddingHorizontal: 10,
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+            ...(Platform.OS === 'web' && { backdropFilter: 'blur(10px)' }),
           }}>
-            <Text style={{ color: '#10b981', fontSize: 13, fontWeight: '700' }}>
-              #{nft.id || nft.token_id}
+            <Ionicons name={escrowIcon} size={11} color="#f59e0b" />
+            <Text style={{ color: '#f59e0b', fontSize: 10, fontWeight: '700', letterSpacing: 0.4 }}>
+              {escrowLabel}
             </Text>
           </View>
-        </View>
-
-        {/* Precio o Espacio Vacío (siempre abajo gracias a justifyContent: 'space-between') */}
-        {nft.is_listed && nft.price ? (
-          <Text style={{
-            fontSize: 15,
-            fontWeight: 'bold',
-            color: isEscrowed ? colors.textSecondary : '#10b981',
-            marginTop: 6,
-            letterSpacing: 0.3,
-          }}>
-            {(nft.price / 1_000_000).toLocaleString('en-US', { minimumFractionDigits: 2 })} USDC
-          </Text>
-        ) : (
-          <View style={{ height: 18, marginTop: 6 }} />
         )}
-
       </View>
 
-      {/*  MODAL CONFIRMAR ENVÍO  */}
+      {/* Info */}
+      <View style={{ padding: 8 }}>
+        {nft.is_listed && displayPrice > 0 && (
+          <Text style={{ color: isEscrowed ? escrowColor : '#10b981', fontSize: 13, fontWeight: '800', marginBottom: 2 }}>
+            {displayPrice.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDC
+          </Text>
+        )}
+        <Text style={{
+          color: isStolen ? alertColors.error : isLost ? lostColor : isAltered ? alteredColor : isEscrowed ? escrowColor : colors.text,
+          fontSize: 11, fontWeight: '600', lineHeight: 15,
+        }} numberOfLines={2}>
+          {nft.model}
+        </Text>
+        <Text style={{ color: '#10b981', fontSize: 12, fontWeight: '700', marginTop: 4 }}>
+          #{tokenId}
+        </Text>
+      </View>
+
+      {/* Modal confirmar envío */}
       <Modal visible={shipConfirmVisible} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-          <View style={{
-            backgroundColor: '#18181b', borderRadius: 24,
-            padding: 28, width: '100%', maxWidth: 340,
-            alignItems: 'center', borderWidth: 1, borderColor: '#2a2542', gap: 10,
-          }}>
+          <View style={{ backgroundColor: '#18181b', borderRadius: 24, padding: 28, width: '100%', maxWidth: 340, alignItems: 'center', borderWidth: 1, borderColor: '#2a2542', gap: 10 }}>
             <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: '#f59e0b20', justifyContent: 'center', alignItems: 'center' }}>
               <Ionicons name="airplane-outline" size={26} color="#f59e0b" />
             </View>
@@ -532,59 +396,35 @@ export default function WatchCard({ nft, removeNFT, navigation, isAdminView = fa
               ¿Has entregado el reloj a la empresa de mensajería? Esta acción notificará al relojero y al comprador.
             </Text>
             <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 4 }}>
-              <TouchableOpacity
-                onPress={() => setShipConfirmVisible(false)}
-                style={{ flex: 1, backgroundColor: '#2a2542', borderRadius: 20, paddingVertical: 12, alignItems: 'center' }}
-              >
+              <TouchableOpacity onPress={() => setShipConfirmVisible(false)} style={{ flex: 1, backgroundColor: '#2a2542', borderRadius: 20, paddingVertical: 12, alignItems: 'center' }}>
                 <Text style={{ color: '#a09dc5', fontWeight: '600', fontSize: 14 }}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={doConfirmShipment}
-                style={{ flex: 1, backgroundColor: '#f59e0b', borderRadius: 20, paddingVertical: 12, alignItems: 'center' }}
-              >
-                {isShipping
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Sí, lo he enviado</Text>
-                }
+              <TouchableOpacity onPress={doConfirmShipment} style={{ flex: 1, backgroundColor: '#f59e0b', borderRadius: 20, paddingVertical: 12, alignItems: 'center' }}>
+                {isShipping ? <ActivityIndicator size="small" color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Sí, lo he enviado</Text>}
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* MODAL RESULTADO ENVÍO  */}
+      {/* Modal resultado envío */}
       <Modal visible={shipResultVisible} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-          <View style={{
-            backgroundColor: '#18181b', borderRadius: 24,
-            padding: 28, width: '100%', maxWidth: 340,
-            alignItems: 'center', borderWidth: 1, borderColor: '#2a2542', gap: 10,
-          }}>
-            <Ionicons
-              name={shipResultMsg.isError ? 'close-circle' : 'checkmark-circle'}
-              size={52}
-              color={shipResultMsg.isError ? '#ef4444' : '#10b981'}
-            />
+          <View style={{ backgroundColor: '#18181b', borderRadius: 24, padding: 28, width: '100%', maxWidth: 340, alignItems: 'center', borderWidth: 1, borderColor: '#2a2542', gap: 10 }}>
+            <Ionicons name={shipResultMsg.isError ? 'close-circle' : 'checkmark-circle'} size={52} color={shipResultMsg.isError ? '#ef4444' : '#10b981'} />
             <Text style={{ color: '#f8f8ff', fontWeight: '800', fontSize: 17, textAlign: 'center' }}>{shipResultMsg.title}</Text>
             <Text style={{ color: '#a09dc5', fontSize: 13, textAlign: 'center', lineHeight: 19 }}>{shipResultMsg.message}</Text>
-            <TouchableOpacity
-              onPress={() => setShipResultVisible(false)}
-              style={{ marginTop: 4, backgroundColor: '#8b5cf6', borderRadius: 20, paddingVertical: 12, paddingHorizontal: 32, width: '100%', alignItems: 'center' }}
-            >
+            <TouchableOpacity onPress={() => setShipResultVisible(false)} style={{ marginTop: 4, backgroundColor: '#8b5cf6', borderRadius: 20, paddingVertical: 12, paddingHorizontal: 32, width: '100%', alignItems: 'center' }}>
               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Entendido</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/*  MODAL CONFIRMAR ENTREGA */}
+      {/* Modal confirmar entrega */}
       <Modal visible={deliveryConfirmVisible} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-          <View style={{
-            backgroundColor: '#18181b', borderRadius: 24,
-            padding: 28, width: '100%', maxWidth: 340,
-            alignItems: 'center', borderWidth: 1, borderColor: '#2a2542', gap: 10,
-          }}>
+          <View style={{ backgroundColor: '#18181b', borderRadius: 24, padding: 28, width: '100%', maxWidth: 340, alignItems: 'center', borderWidth: 1, borderColor: '#2a2542', gap: 10 }}>
             <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: '#10b98120', justifyContent: 'center', alignItems: 'center' }}>
               <Ionicons name="checkmark-done-outline" size={26} color="#10b981" />
             </View>
@@ -593,16 +433,10 @@ export default function WatchCard({ nft, removeNFT, navigation, isAdminView = fa
               ¿Has recibido el reloj y estás conforme? Esta acción liberará el pago al vendedor y transferirá la propiedad del NFT a tu wallet.
             </Text>
             <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 4 }}>
-              <TouchableOpacity
-                onPress={() => setDeliveryConfirmVisible(false)}
-                style={{ flex: 1, backgroundColor: '#2a2542', borderRadius: 20, paddingVertical: 12, alignItems: 'center' }}
-              >
+              <TouchableOpacity onPress={() => setDeliveryConfirmVisible(false)} style={{ flex: 1, backgroundColor: '#2a2542', borderRadius: 20, paddingVertical: 12, alignItems: 'center' }}>
                 <Text style={{ color: '#a09dc5', fontWeight: '600', fontSize: 14 }}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={doConfirmDelivery}
-                style={{ flex: 1, backgroundColor: '#10b981', borderRadius: 20, paddingVertical: 12, alignItems: 'center' }}
-              >
+              <TouchableOpacity onPress={doConfirmDelivery} style={{ flex: 1, backgroundColor: '#10b981', borderRadius: 20, paddingVertical: 12, alignItems: 'center' }}>
                 <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Sí, lo he recibido</Text>
               </TouchableOpacity>
             </View>
@@ -610,30 +444,12 @@ export default function WatchCard({ nft, removeNFT, navigation, isAdminView = fa
         </View>
       </Modal>
 
-      {/* OVERLAY FIRMANDO CON METAMASK  */}
+      {/* Overlay firmando con MetaMask */}
       <Modal visible={metaMaskLoading} transparent animationType="fade">
-        <View style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.78)',
-          justifyContent: 'center',
-          alignItems: 'center',
-          ...(Platform.OS === 'web' && { backdropFilter: 'blur(6px)' }),
-        }}>
-          <View style={{
-            backgroundColor: '#18181b',
-            borderRadius: 20,
-            padding: 32,
-            alignItems: 'center',
-            gap: 16,
-            borderWidth: 1,
-            borderColor: '#2a2542',
-            minWidth: 260,
-            maxWidth: 320,
-          }}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.78)', justifyContent: 'center', alignItems: 'center', ...(Platform.OS === 'web' && { backdropFilter: 'blur(6px)' }) }}>
+          <View style={{ backgroundColor: '#18181b', borderRadius: 20, padding: 32, alignItems: 'center', gap: 16, borderWidth: 1, borderColor: '#2a2542', minWidth: 260, maxWidth: 320 }}>
             <ActivityIndicator size="large" color="#8b5cf6" />
-            <Text style={{ color: '#f0f0f8', fontWeight: '700', fontSize: 16, textAlign: 'center' }}>
-              Esperando firma…
-            </Text>
+            <Text style={{ color: '#f0f0f8', fontWeight: '700', fontSize: 16, textAlign: 'center' }}>Esperando firma…</Text>
             <Text style={{ color: '#a09dc5', textAlign: 'center', fontSize: 13, lineHeight: 20 }}>
               Confirma la transacción en tu wallet para continuar.
             </Text>
