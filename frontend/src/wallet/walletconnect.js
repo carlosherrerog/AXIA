@@ -18,14 +18,19 @@ const metadata = {
 };
 
 createWeb3Modal({
-  ethersConfig: defaultConfig({ metadata }),
+  ethersConfig: defaultConfig({
+    metadata,
+    auth: { email: false, socials: [] },
+  }),
   chains:       [amoy],
   projectId:    PROJECT_ID,
   themeMode:    'dark',
   themeVariables: {
-    '--w3m-accent':           '#8b5cf6',
+    '--w3m-accent':               '#8b5cf6',
     '--w3m-border-radius-master': '4px',
   },
+  enableOnramp: false,
+  enableSwaps:  false,
 });
 
 export { PROJECT_ID };

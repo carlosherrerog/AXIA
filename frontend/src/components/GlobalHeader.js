@@ -16,11 +16,13 @@ import AlertModal, { useAlert } from './AlertModal';
 // Web3Modal hooks — solo en web
 let useWeb3Modal = () => ({ open: null });
 let useWeb3ModalProvider = () => ({ walletProvider: null });
+let useDisconnect = () => ({ disconnect: null });
 if (Platform.OS === 'web') {
   try {
     const wc = require('@web3modal/ethers/react');
     useWeb3Modal = wc.useWeb3Modal;
     useWeb3ModalProvider = wc.useWeb3ModalProvider;
+    useDisconnect = wc.useDisconnect;
   } catch {}
 }
 
@@ -41,8 +43,9 @@ export default function GlobalHeader({
   const { width } = useWindowDimensions();
   const isMobile  = width < 768;
 
-  const { open: w3mOpen }          = useWeb3Modal();
+  const { open: w3mOpen }               = useWeb3Modal();
   const { walletProvider: w3mProvider } = useWeb3ModalProvider();
+  const { disconnect: w3mDisconnect }   = useDisconnect();
 
   const { activeTab, onTabPress, tabs } = useContext(NavTabContext);
   const showInlineTabs = !isMobile && tabs?.length > 0 && !showBack;
@@ -163,8 +166,11 @@ export default function GlobalHeader({
     if (window.ethereum) {
       await window.ethereum.request({ method: 'eth_requestAccounts' });
       await doVerify(window.ethereum);
+    } else if (w3mProvider) {
+      // WalletConnect ya está conectado — usar provider existente directamente
+      await doVerify(w3mProvider);
     } else if (w3mOpen) {
-      // Móvil o sin extensión: abrir modal Web3Modal
+      // Móvil o sin extensión: abrir modal Web3Modal para conectar
       pendingW3mVerify.current = true;
       await w3mOpen();
       // doVerify se llamará desde el useEffect cuando walletProvider esté disponible
@@ -186,6 +192,8 @@ export default function GlobalHeader({
     try {
       setIsProcessingWallet(true);
       await api.post('/auth/disconnect');
+      // Limpiar también la sesión de WalletConnect para que no persista entre conexiones
+      if (w3mDisconnect) await w3mDisconnect().catch(() => {});
       const updated = { ...localUser, wallet_address: null };
       setLocalUser(updated);
       onWalletChange?.(updated);
