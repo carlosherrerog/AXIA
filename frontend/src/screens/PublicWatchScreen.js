@@ -1,6 +1,6 @@
 // src/screens/PublicWatchScreen.js
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, TextInput, Modal, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, TextInput, Modal, Platform, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
@@ -30,6 +30,7 @@ const MARKETPLACE_ABI = ["function buyWatchEscrow(uint256 tokenId) external"];
 
 export default function PublicWatchScreen({ route, navigation }) {
   const { watchId, initialTab = 'details' } = route.params || {};
+  const { width } = useWindowDimensions();
   const { ethProvider } = useEthProvider();
   const { onScroll, headerTranslate } = useScrollAware();
 
