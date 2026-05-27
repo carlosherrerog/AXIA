@@ -1,10 +1,6 @@
 import { Platform } from 'react-native';
 import { ethers } from 'ethers';
 
-// Hook centralizado para proveedor EIP-1193 y helper de firma.
-// Patrón GlobalHeader:
-//   - Desktop con extensión: window.ethereum + eth_requestAccounts explícito
-//   - Móvil / sin extensión:  walletProvider de Web3Modal (WalletConnect)
 export function useEthProvider() {
   if (Platform.OS !== 'web') {
     return { ethProvider: null, getConnectedSigner: async () => { throw new Error('Solo disponible en web'); } };
@@ -19,22 +15,47 @@ export function useEthProvider() {
   } catch {}
 
   const win = typeof window !== 'undefined' ? window : null;
-  // Para detectar si hay extensión disponible (solo lectura, sin activar)
   const ethProvider = win?.ethereum || walletProvider || null;
 
-  // Helper que sigue el mismo patrón que GlobalHeader.proceedConnect:
-  // 1. Si hay extensión → eth_requestAccounts (abre MetaMask si está bloqueado) → signer
-  // 2. Si no (móvil/WalletConnect) → usa walletProvider directamente → signer
   const getConnectedSigner = async () => {
+    // Detectar si window.ethereum es el proveedor nativo de MetaMask (extensión)
+    // o un wrapper de Web3Modal/WalletConnect
+    const isNativeExtension = win?.ethereum?.isMetaMask && !win?.ethereum?.isWalletConnect;
+
+    console.log('[useEthProvider] getConnectedSigner', {
+      hasWindowEthereum: !!win?.ethereum,
+      isMetaMask: win?.ethereum?.isMetaMask,
+      isWalletConnect: win?.ethereum?.isWalletConnect,
+      isNativeExtension,
+      hasWalletProvider: !!walletProvider,
+      walletProviderIsMetaMask: walletProvider?.isMetaMask,
+    });
+
+    if (isNativeExtension) {
+      console.log('[useEthProvider] Usando extensión MetaMask nativa');
+      await win.ethereum.request({ method: 'eth_requestAccounts' });
+      console.log('[useEthProvider] eth_requestAccounts OK');
+      const provider = new ethers.BrowserProvider(win.ethereum);
+      const signer = await provider.getSigner();
+      console.log('[useEthProvider] signer OK, address:', await signer.getAddress());
+      return signer;
+    }
+
+    // Sin extensión nativa o MetaMask no detectado: usar walletProvider de Web3Modal
+    if (walletProvider) {
+      console.log('[useEthProvider] Usando walletProvider de Web3Modal');
+      const provider = new ethers.BrowserProvider(walletProvider);
+      return provider.getSigner();
+    }
+
+    // Último recurso: intentar con window.ethereum aunque no sea MetaMask puro
     if (win?.ethereum) {
+      console.log('[useEthProvider] Usando window.ethereum (no MetaMask puro)');
       await win.ethereum.request({ method: 'eth_requestAccounts' });
       const provider = new ethers.BrowserProvider(win.ethereum);
       return provider.getSigner();
     }
-    if (walletProvider) {
-      const provider = new ethers.BrowserProvider(walletProvider);
-      return provider.getSigner();
-    }
+
     throw new Error('No hay wallet disponible. Conecta MetaMask u otra wallet compatible.');
   };
 
