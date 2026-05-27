@@ -1,6 +1,24 @@
 import { Platform } from 'react-native';
 import { ethers } from 'ethers';
 
+// Polygon Amoy exige mínimo 25 gwei de tip. Usamos 30 gwei como margen seguro.
+const MIN_PRIORITY_FEE = ethers.parseUnits('30', 'gwei');
+
+function applyMinGasFee(provider) {
+  const _getFeeData = provider.getFeeData.bind(provider);
+  provider.getFeeData = async () => {
+    const feeData = await _getFeeData();
+    const tip = feeData.maxPriorityFeePerGas ?? 0n;
+    const adjustedTip = tip < MIN_PRIORITY_FEE ? MIN_PRIORITY_FEE : tip;
+    return new ethers.FeeData(
+      feeData.gasPrice,
+      feeData.maxFeePerGas,
+      adjustedTip,
+    );
+  };
+  return provider;
+}
+
 export function useEthProvider() {
   if (Platform.OS !== 'web') {
     return { ethProvider: null, getConnectedSigner: async () => { throw new Error('Solo disponible en web'); } };
@@ -18,41 +36,22 @@ export function useEthProvider() {
   const ethProvider = win?.ethereum || walletProvider || null;
 
   const getConnectedSigner = async () => {
-    // Detectar si window.ethereum es el proveedor nativo de MetaMask (extensión)
-    // o un wrapper de Web3Modal/WalletConnect
     const isNativeExtension = win?.ethereum?.isMetaMask && !win?.ethereum?.isWalletConnect;
 
-    console.log('[useEthProvider] getConnectedSigner', {
-      hasWindowEthereum: !!win?.ethereum,
-      isMetaMask: win?.ethereum?.isMetaMask,
-      isWalletConnect: win?.ethereum?.isWalletConnect,
-      isNativeExtension,
-      hasWalletProvider: !!walletProvider,
-      walletProviderIsMetaMask: walletProvider?.isMetaMask,
-    });
-
     if (isNativeExtension) {
-      console.log('[useEthProvider] Usando extensión MetaMask nativa');
       await win.ethereum.request({ method: 'eth_requestAccounts' });
-      console.log('[useEthProvider] eth_requestAccounts OK');
-      const provider = new ethers.BrowserProvider(win.ethereum);
-      const signer = await provider.getSigner();
-      console.log('[useEthProvider] signer OK, address:', await signer.getAddress());
-      return signer;
-    }
-
-    // Sin extensión nativa o MetaMask no detectado: usar walletProvider de Web3Modal
-    if (walletProvider) {
-      console.log('[useEthProvider] Usando walletProvider de Web3Modal');
-      const provider = new ethers.BrowserProvider(walletProvider);
+      const provider = applyMinGasFee(new ethers.BrowserProvider(win.ethereum));
       return provider.getSigner();
     }
 
-    // Último recurso: intentar con window.ethereum aunque no sea MetaMask puro
+    if (walletProvider) {
+      const provider = applyMinGasFee(new ethers.BrowserProvider(walletProvider));
+      return provider.getSigner();
+    }
+
     if (win?.ethereum) {
-      console.log('[useEthProvider] Usando window.ethereum (no MetaMask puro)');
       await win.ethereum.request({ method: 'eth_requestAccounts' });
-      const provider = new ethers.BrowserProvider(win.ethereum);
+      const provider = applyMinGasFee(new ethers.BrowserProvider(win.ethereum));
       return provider.getSigner();
     }
 
