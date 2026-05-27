@@ -407,12 +407,12 @@ export default function PublicWatchScreen({ route, navigation }) {
                 />
                 {isAltered && (
                   <div style={{ position: 'absolute', top: 15, left: 15, backgroundColor: '#f97316', paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6, borderRadius: 20 }}>
-                    <span style={{ color: '#fff', fontWeight: 'bold', fontSize: 13, fontFamily: 'inherit' }}>ALTERADO</span>
+                    <span style={{ color: '#fff', fontWeight: 'bold', fontSize: 13, fontFamily: 'system-ui, -apple-system, sans-serif' }}>ALTERADO</span>
                   </div>
                 )}
                 {isListed && !isAltered && (
                   <div style={{ position: 'absolute', top: 15, left: 15, backgroundColor: isEscrowed ? '#f59e0b' : colors.primary, paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6, borderRadius: 20 }}>
-                    <span style={{ color: '#fff', fontWeight: 'bold', fontSize: 13, fontFamily: 'inherit' }}>
+                    <span style={{ color: '#fff', fontWeight: 'bold', fontSize: 13, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
                       {isEscrowed ? 'RESERVADO' : `EN VENTA · ${displayPrice} USDC`}
                     </span>
                   </div>
