@@ -33,7 +33,7 @@ export default function WatchSections({
   const [activeTab, setActiveTab] = useState('collection');
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
-  const hPad = width >= 768 ? Math.round(width * 0.03) : 16;
+  const hPad = width >= 768 ? Math.max(24, Math.floor((width - MAX_CONTENT_WIDTH) / 2)) : 16;
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   // Lógica de rotación del mini-reloj
