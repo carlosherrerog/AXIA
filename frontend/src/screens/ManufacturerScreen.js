@@ -380,7 +380,7 @@ export default function ManufacturerScreen({ navigation }) {
               columnWrapperStyle={cols > 1 ? { gap: 16, marginBottom: 16, overflow: 'visible' } : undefined}
               contentContainerStyle={cols === 1 ? { gap: 16, overflow: 'visible' } : undefined}
               renderItem={({ item: watch }) => (
-                <View style={{ width: cardWidth, overflow: 'visible', marginTop: 12, marginLeft: 12 }}>
+                <View style={{ width: cardWidth, overflow: 'visible' }}>
                   <WatchCard
                     nft={watch}
                     removeNFT={removeNFT}
