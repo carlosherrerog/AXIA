@@ -1,7 +1,7 @@
 // src/screens/WatchScreen.js
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator,
-         Image, Platform, Alert, Modal, Switch, Pressable, useWindowDimensions } from 'react-native';
+         Image, Platform, Alert, Modal, Switch, Pressable, useWindowDimensions, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ethers } from 'ethers';
 import { useFocusEffect } from '@react-navigation/native';
@@ -959,6 +959,21 @@ export default function WatchScreen({ route, navigation }) {
               <Text style={watchScreenStyles.detailLabel}>Estándar de token:</Text>
               <Text style={watchScreenStyles.detailValue}>ERC721</Text>
             </View>
+
+            <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 15 }} />
+
+            <TouchableOpacity
+              onPress={() => Linking.openURL(`${POLYGONSCAN_BASE}/nft/${NFT_ADDRESS}/${watchId}`)}
+              style={{
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                backgroundColor: '#8b5cf612',
+                borderRadius: 8, borderWidth: 1, borderColor: '#8b5cf630',
+                paddingHorizontal: 14, paddingVertical: 9,
+              }}
+            >
+              <Ionicons name="open-outline" size={14} color="#8b5cf6" />
+              <Text style={{ color: '#8b5cf6', fontSize: 13, fontWeight: '600' }}>Ver en Polygonscan</Text>
+            </TouchableOpacity>
           </View>
         )}
 
