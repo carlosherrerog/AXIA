@@ -248,7 +248,12 @@ function ManufacturerDashboard() {
 
 // CONFIGURACIÓN DE RUTAS (LINKING)
 const linking = {
-  prefixes: ['http://localhost:8081', 'axia://'],
+  prefixes: [
+    'http://localhost:8081',
+    'https://localhost:8081',
+    process.env.EXPO_PUBLIC_APP_URL || '',
+    'axia://',
+  ].filter(Boolean),
   config: {
     screens: {
       PublicDashboard: {
@@ -314,14 +319,19 @@ function AppNavigator() {
       const res = await api.get('/users/me');
       const u = res.data;
 
-      if (u.is_admin)
-        navigationRef.reset({ index: 0, routes: [{ name: 'Admin', params: { user: u } }] });
-      else if (u.roles?.includes('RELOJERO'))
-        navigationRef.reset({ index: 0, routes: [{ name: 'WatchmakerDashboard', params: { user: u } }] });
-      else if (u.roles?.includes('FABRICANTE'))
-        navigationRef.reset({ index: 0, routes: [{ name: 'ManufacturerDashboard', params: { user: u } }] });
-      else
-        navigationRef.reset({ index: 0, routes: [{ name: 'UserDashboard', params: { user: u } }] });
+      let targetDashboard;
+      if (u.is_admin) targetDashboard = 'Admin';
+      else if (u.roles?.includes('RELOJERO')) targetDashboard = 'WatchmakerDashboard';
+      else if (u.roles?.includes('FABRICANTE')) targetDashboard = 'ManufacturerDashboard';
+      else targetDashboard = 'UserDashboard';
+
+      // Si el linking ya resolvió la URL al dashboard correcto, no resetear
+      // (esto preserva la pestaña/pantalla activa al refrescar en web)
+      const state = navigationRef.getState();
+      const topRouteName = state?.routes?.[state.index]?.name;
+      if (topRouteName === targetDashboard) return;
+
+      navigationRef.reset({ index: 0, routes: [{ name: targetDashboard, params: { user: u } }] });
     } catch {
       // Token inválido o expirado — quedarse en PublicDashboard
     }
