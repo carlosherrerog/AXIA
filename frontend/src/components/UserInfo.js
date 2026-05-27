@@ -33,9 +33,10 @@ export default function UserInfo({ loggedUser, showAlert, stats, onSettings, noM
   const [copied,      setCopied]      = useState(false);
 
   const fetchBalances = useCallback(async (address) => {
-    if (Platform.OS !== 'web' || !window.ethereum || !address) return;
+    if (!address) return;
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      const AMOY_RPC = process.env.EXPO_PUBLIC_RPC_URL || 'https://rpc-amoy.polygon.technology';
+      const provider = new ethers.JsonRpcProvider(AMOY_RPC);
       const polBal = await provider.getBalance(address);
       setPolBalance(fmt(ethers.formatEther(polBal), 4));
       const usdcAddress = process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS;
@@ -56,13 +57,14 @@ export default function UserInfo({ loggedUser, showAlert, stats, onSettings, noM
   }, [loggedUser?.wallet_address, fetchBalances]);
 
   useEffect(() => {
-    if (Platform.OS !== 'web' || !window.ethereum || !loggedUser?.wallet_address) return;
+    if (!loggedUser?.wallet_address) return;
     const usdcAddress = process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS;
     if (!usdcAddress) return;
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    const AMOY_RPC = process.env.EXPO_PUBLIC_RPC_URL || 'https://rpc-amoy.polygon.technology';
+    const provider = new ethers.JsonRpcProvider(AMOY_RPC);
     const abi = ['event Transfer(address indexed from, address indexed to, uint256 value)'];
     const contract = new ethers.Contract(usdcAddress, abi, provider);
-    const onTransfer = (from, to, value) => {
+    const onTransfer = (from, to) => {
       const addr = loggedUser.wallet_address.toLowerCase();
       if (from.toLowerCase() === addr || to.toLowerCase() === addr) {
         fetchBalances(loggedUser.wallet_address);
@@ -70,7 +72,7 @@ export default function UserInfo({ loggedUser, showAlert, stats, onSettings, noM
     };
     contract.on('Transfer', onTransfer);
     return () => contract.removeAllListeners('Transfer');
-  }, [loggedUser?.wallet_address, fetchBalances, showAlert]);
+  }, [loggedUser?.wallet_address, fetchBalances]);
 
   const handleCopy = async () => {
     if (!loggedUser?.wallet_address) return;
