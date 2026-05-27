@@ -607,67 +607,77 @@ export default function GlobalHeader({
       {/* Modal alerta  */}
       <AlertModal {...alertProps} />
 
-      {/* Aviso previo al flujo WalletConnect (móvil) */}
+      {/* Aviso previo al flujo de conexión */}
       <Modal visible={walletInfoVisible} transparent animationType="fade" onRequestClose={() => setWalletInfoVisible(false)}>
         <Pressable
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }}
           onPress={() => setWalletInfoVisible(false)}
         >
           <Pressable onPress={e => e.stopPropagation()}>
-            <View style={{
-              backgroundColor: colors.backgroundAlt,
-              borderRadius: 20, borderWidth: 1, borderColor: colors.border,
-              width: 300, padding: 24, gap: 16,
-              ...(Platform.OS === 'web' && { boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }),
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Ionicons name="wallet-outline" size={22} color={colors.primary} />
-                <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', flex: 1 }}>
-                  Conectar wallet
-                </Text>
-              </View>
-
-              <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20 }}>
-                Tu wallet realizará <Text style={{ color: colors.text, fontWeight: '600' }}>2 acciones</Text>:
-              </Text>
-
-              <View style={{ gap: 10 }}>
-                <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
-                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: `${colors.primary}25`, justifyContent: 'center', alignItems: 'center' }}>
-                    <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '800' }}>1</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>Aprobar la conexión</Text>
-                    <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
-                      Permite que AXIA lea tu dirección pública.
+            {(() => {
+              const hasExtension = Platform.OS === 'web' && typeof window !== 'undefined' && !!window.ethereum;
+              return (
+                <View style={{
+                  backgroundColor: colors.backgroundAlt,
+                  borderRadius: 20, borderWidth: 1, borderColor: colors.border,
+                  width: 300, padding: 24, gap: 16,
+                  ...(Platform.OS === 'web' && { boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }),
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Ionicons name="wallet-outline" size={22} color={colors.primary} />
+                    <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', flex: 1 }}>
+                      Conectar wallet
                     </Text>
                   </View>
-                </View>
-                <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
-                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: `${colors.primary}25`, justifyContent: 'center', alignItems: 'center' }}>
-                    <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '800' }}>2</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>Firmar un mensaje</Text>
-                    <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
-                      Prueba que eres el propietario de la wallet.{' '}
-                      <Text style={{ color: '#10b981', fontWeight: '600' }}>Sin coste.</Text>
-                    </Text>
-                  </View>
-                </View>
-              </View>
 
-              <TouchableOpacity
-                onPress={proceedConnect}
-                style={{
-                  backgroundColor: colors.primary, borderRadius: 12,
-                  paddingVertical: 12, alignItems: 'center', marginTop: 4,
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>Continuar</Text>
-              </TouchableOpacity>
-            </View>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20 }}>
+                    {hasExtension
+                      ? <>Tu wallet realizará <Text style={{ color: colors.text, fontWeight: '600' }}>1 acción</Text>:</>
+                      : <>Tu wallet realizará <Text style={{ color: colors.text, fontWeight: '600' }}>2 acciones</Text>:</>
+                    }
+                  </Text>
+
+                  <View style={{ gap: 10 }}>
+                    {!hasExtension && (
+                      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+                        <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: `${colors.primary}25`, justifyContent: 'center', alignItems: 'center' }}>
+                          <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '800' }}>1</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>Aprobar la conexión</Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
+                            Permite que AXIA lea tu dirección pública.
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                    <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+                      <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: `${colors.primary}25`, justifyContent: 'center', alignItems: 'center' }}>
+                        <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '800' }}>{hasExtension ? '1' : '2'}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>Firmar un mensaje</Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
+                          Prueba que eres el propietario de la wallet.{' '}
+                          <Text style={{ color: '#10b981', fontWeight: '600' }}>Sin coste.</Text>
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={proceedConnect}
+                    style={{
+                      backgroundColor: colors.primary, borderRadius: 12,
+                      paddingVertical: 12, alignItems: 'center', marginTop: 4,
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>Continuar</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })()}
           </Pressable>
         </Pressable>
       </Modal>
