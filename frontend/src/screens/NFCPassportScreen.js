@@ -375,12 +375,10 @@ export default function NFCPassportScreen({ route, navigation }) {
                 <View style={[watchScreenStyles.detailRow, { marginBottom: 6 }]}>
                   <Text style={watchScreenStyles.detailLabel}>Propietario:</Text>
                   <View style={{ flex: 1, gap: 3 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-                      <Text style={watchScreenStyles.detailValue}>{ownerData.username || 'Usuario'}</Text>
-                      {roleLabel && (
-                        <View style={{ backgroundColor: roleColor + '20', borderWidth: 1, borderColor: roleColor + '60', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 1 }}>
-                          <Text style={{ color: roleColor, fontSize: 10, fontWeight: '700', letterSpacing: 0.4 }}>{roleLabel.toUpperCase()}</Text>
-                        </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>{ownerData.username || 'Usuario'}</Text>
+                      {roleKey && (
+                        <Ionicons name="checkmark-circle" size={16} color={roleColor} />
                       )}
                     </View>
                     <TouchableOpacity onPress={() => Clipboard.setStringAsync(ownerData.wallet_address)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
