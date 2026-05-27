@@ -59,6 +59,7 @@ export default function GlobalHeader({
   const [walletMenuVisible, setWalletMenuVisible] = useState(false);
   const [isProcessingWallet, setIsProcessingWallet] = useState(false);
   const [walletStepMsg, setWalletStepMsg]        = useState('');
+  const [walletInfoVisible, setWalletInfoVisible] = useState(false);
   const [walletCopied, setWalletCopied]         = useState(false);
   const { alertProps, showAlert, hideAlert }    = useAlert();
 
@@ -143,18 +144,39 @@ export default function GlobalHeader({
   };
 
   // Wallet
+  const AMOY_CHAIN_ID = '0x13882'; // 80002
+
   const doVerify = async (eip1193) => {
     try {
       setIsProcessingWallet(true);
       setWalletStepMsg('Conectando con tu wallet…');
-      const provider  = new ethers.BrowserProvider(eip1193);
-      const signer    = await provider.getSigner();
-      const address   = await signer.getAddress();
+      const provider = new ethers.BrowserProvider(eip1193);
+
+      // Cambiar a Polygon Amoy para que MetaMask muestre la red correcta
+      try {
+        await eip1193.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: AMOY_CHAIN_ID }] });
+      } catch (switchErr) {
+        if (switchErr.code === 4902) {
+          await eip1193.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: AMOY_CHAIN_ID,
+              chainName: 'Polygon Amoy',
+              nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+              rpcUrls: ['https://rpc-amoy.polygon.technology'],
+              blockExplorerUrls: ['https://amoy.polygonscan.com'],
+            }],
+          });
+        }
+      }
+
+      const signer  = await provider.getSigner();
+      const address = await signer.getAddress();
       const { data: { nonce } } = await api.post('/auth/challenge', { address });
       setWalletStepMsg('Firma el mensaje en tu wallet');
       const signature = await signer.signMessage(nonce);
       setWalletStepMsg('Verificando…');
-      const res       = await api.post('/auth/verify', { address, signature, nonce });
+      const res = await api.post('/auth/verify', { address, signature, nonce });
       setLocalUser(res.data);
       onWalletChange?.(res.data);
       showAlert('Wallet vinculada', 'Tu cuenta está conectada correctamente.', 'success');
@@ -166,19 +188,22 @@ export default function GlobalHeader({
     }
   };
 
+  const proceedConnect = async () => {
+    setWalletInfoVisible(false);
+    pendingW3mVerify.current = true;
+    await w3mOpen();
+  };
+
   const handleConnect = async () => {
     if (Platform.OS !== 'web') return;
     if (window.ethereum) {
       await window.ethereum.request({ method: 'eth_requestAccounts' });
       await doVerify(window.ethereum);
     } else if (w3mProvider) {
-      // WalletConnect ya está conectado — usar provider existente directamente
       await doVerify(w3mProvider);
     } else if (w3mOpen) {
-      // Móvil o sin extensión: abrir modal Web3Modal para conectar
-      pendingW3mVerify.current = true;
-      await w3mOpen();
-      // doVerify se llamará desde el useEffect cuando walletProvider esté disponible
+      // Mostrar aviso de los 2 pasos antes de abrir WalletConnect
+      setWalletInfoVisible(true);
     } else {
       showAlert('Wallet requerida', 'Instala MetaMask o usa un navegador compatible.', 'warning');
     }
@@ -583,6 +608,71 @@ export default function GlobalHeader({
 
       {/* Modal alerta  */}
       <AlertModal {...alertProps} />
+
+      {/* Aviso previo al flujo WalletConnect (móvil) */}
+      <Modal visible={walletInfoVisible} transparent animationType="fade" onRequestClose={() => setWalletInfoVisible(false)}>
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }}
+          onPress={() => setWalletInfoVisible(false)}
+        >
+          <Pressable onPress={e => e.stopPropagation()}>
+            <View style={{
+              backgroundColor: colors.backgroundAlt,
+              borderRadius: 20, borderWidth: 1, borderColor: colors.border,
+              width: 300, padding: 24, gap: 16,
+              ...(Platform.OS === 'web' && { boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }),
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Ionicons name="wallet-outline" size={22} color={colors.primary} />
+                <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', flex: 1 }}>
+                  Conectar wallet
+                </Text>
+              </View>
+
+              <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20 }}>
+                Tu wallet realizará <Text style={{ color: colors.text, fontWeight: '600' }}>2 acciones</Text>:
+              </Text>
+
+              <View style={{ gap: 10 }}>
+                <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: `${colors.primary}25`, justifyContent: 'center', alignItems: 'center' }}>
+                    <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '800' }}>1</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>Aprobar la conexión</Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
+                      Permite que AXIA lea tu dirección pública.
+                    </Text>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: `${colors.primary}25`, justifyContent: 'center', alignItems: 'center' }}>
+                    <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '800' }}>2</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>Firmar un mensaje</Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
+                      Prueba que eres el propietario de la wallet.{' '}
+                      <Text style={{ color: '#10b981', fontWeight: '600' }}>Sin coste.</Text>
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                onPress={proceedConnect}
+                style={{
+                  backgroundColor: colors.primary, borderRadius: 12,
+                  paddingVertical: 12, alignItems: 'center', marginTop: 4,
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>Continuar</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Spinner de wallet*/}
       {isGlobalLoading && (
