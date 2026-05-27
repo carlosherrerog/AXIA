@@ -706,10 +706,10 @@ export default function PublicWatchScreen({ route, navigation }) {
                             {user && !isEscrow && (
                               <TouchableOpacity
                                 onPress={() => navigation.navigate('PublicProfile', { userId: user.id })}
-                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.primary + '18', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 20 }}
+                                style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                               >
-                                <Ionicons name="person-outline" size={10} color={colors.primaryLight} />
-                                <Text style={{ color: colors.primaryLight, fontSize: 10, fontWeight: '600' }}>{user.username}</Text>
+                                <Text style={{ color: colors.text, fontSize: 11, fontWeight: '600' }}>{user.username}</Text>
+                                {(() => { const rk = user.roles?.find(r => ['FABRICANTE','DEALER','RELOJERO'].includes(r)); return rk ? <Ionicons name="checkmark-circle" size={13} color={roleColors[rk]} /> : null; })()}
                               </TouchableOpacity>
                             )}
                           </View>
@@ -750,10 +750,10 @@ export default function PublicWatchScreen({ route, navigation }) {
                           {event.watchmakerUser && !isManufacturer && (
                             <TouchableOpacity
                               onPress={() => navigation.navigate('PublicProfile', { userId: event.watchmakerUser.id })}
-                              style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.primary + '18', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 }}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                             >
-                              <Ionicons name="person-outline" size={11} color={colors.primaryLight} />
-                              <Text style={{ color: colors.primaryLight, fontSize: 11, fontWeight: '600' }}>{event.watchmakerUser.username}</Text>
+                              <Text style={{ color: colors.text, fontSize: 11, fontWeight: '600' }}>{event.watchmakerUser.username}</Text>
+                              {(() => { const rk = event.watchmakerUser.roles?.find(r => ['FABRICANTE','DEALER','RELOJERO'].includes(r)); return rk ? <Ionicons name="checkmark-circle" size={13} color={roleColors[rk]} /> : null; })()}
                             </TouchableOpacity>
                           )}
                         </View>
