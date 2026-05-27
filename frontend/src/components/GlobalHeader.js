@@ -58,6 +58,7 @@ export default function GlobalHeader({
   const [disconnectVisible, setDisconnectVisible] = useState(false);
   const [walletMenuVisible, setWalletMenuVisible] = useState(false);
   const [isProcessingWallet, setIsProcessingWallet] = useState(false);
+  const [walletStepMsg, setWalletStepMsg]        = useState('');
   const [walletCopied, setWalletCopied]         = useState(false);
   const { alertProps, showAlert, hideAlert }    = useAlert();
 
@@ -145,11 +146,14 @@ export default function GlobalHeader({
   const doVerify = async (eip1193) => {
     try {
       setIsProcessingWallet(true);
+      setWalletStepMsg('Conectando con tu wallet…');
       const provider  = new ethers.BrowserProvider(eip1193);
       const signer    = await provider.getSigner();
       const address   = await signer.getAddress();
       const { data: { nonce } } = await api.post('/auth/challenge', { address });
+      setWalletStepMsg('Firma el mensaje en tu wallet');
       const signature = await signer.signMessage(nonce);
+      setWalletStepMsg('Verificando…');
       const res       = await api.post('/auth/verify', { address, signature, nonce });
       setLocalUser(res.data);
       onWalletChange?.(res.data);
@@ -158,6 +162,7 @@ export default function GlobalHeader({
       if (e.code !== 4001) showAlert('Error', 'No se pudo vincular la wallet.', 'error');
     } finally {
       setIsProcessingWallet(false);
+      setWalletStepMsg('');
     }
   };
 
@@ -582,9 +587,16 @@ export default function GlobalHeader({
       {/* Spinner de wallet*/}
       {isGlobalLoading && (
         <Modal visible transparent animationType="fade">
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', gap: 12 }}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', gap: 16, paddingHorizontal: 40 }}>
             <ActivityIndicator size="large" color={colors.primaryLight} />
-            <Text style={{ color: '#fff', fontSize: 13 }}>Procesando…</Text>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600', textAlign: 'center' }}>
+              {walletStepMsg || 'Procesando…'}
+            </Text>
+            {walletStepMsg === 'Firma el mensaje en tu wallet' && (
+              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, textAlign: 'center', lineHeight: 18 }}>
+                Esta firma verifica que eres el propietario de la wallet.{'\n'}No es una transacción y no tiene ningún coste.
+              </Text>
+            )}
           </View>
         </Modal>
       )}
