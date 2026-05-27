@@ -422,18 +422,18 @@ export default function NFCPassportScreen({ route, navigation }) {
 
             <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 15 }} />
 
-            <View style={{ marginBottom: 12 }}>
+            <View style={[watchScreenStyles.detailRow, { marginBottom: 8 }]}>
               <Text style={watchScreenStyles.detailLabel}>Estado Blockchain</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                <Ionicons name={currentStateInfo.icon} size={14} color={currentStateInfo.color} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Ionicons name={currentStateInfo.icon} size={13} color={currentStateInfo.color} />
                 <Text style={{ color: currentStateInfo.color, fontSize: 13, fontWeight: '600' }}>
                   {currentStateId === 0 ? 'En propiedad' : currentStateInfo.label}
                 </Text>
               </View>
             </View>
-            <View style={{ marginBottom: 10 }}>
+            <View style={[watchScreenStyles.detailRow, { marginBottom: 10 }]}>
               <Text style={watchScreenStyles.detailLabel}>Estado Marketplace</Text>
-              <Text style={{ fontSize: 13, fontWeight: '600', marginTop: 3, color: isAltered ? colors.textMuted : isEscrowed ? '#f59e0b' : isListed ? colors.primaryLight : watchData?.is_public ? '#10b981' : colors.textSecondary }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: isAltered ? colors.textMuted : isEscrowed ? '#f59e0b' : isListed ? colors.primaryLight : watchData?.is_public ? '#10b981' : colors.textSecondary }}>
                 {isAltered ? '—' : isEscrowed ? 'Reservado' : isListed ? 'En Venta' : watchData?.is_public ? 'Público' : 'Privado'}
               </Text>
             </View>
