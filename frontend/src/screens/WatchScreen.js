@@ -1769,7 +1769,7 @@ export default function WatchScreen({ route, navigation }) {
               Esperando firma…
             </Text>
             <Text style={{ color: colors.textSecondary, textAlign: 'center', fontSize: 13, lineHeight: 20 }}>
-              Confirma la transacción en tu wallet para continuar.
+              Confirma la transacción en MetaMask para continuar.{'\n'}Si no aparece automáticamente, haz clic en el icono de MetaMask en la barra de herramientas del navegador.
             </Text>
           </View>
         </View>
