@@ -215,7 +215,7 @@ export default function WatchCard({ nft, removeNFT, navigation, isAdminView = fa
             borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 3,
           }}>
             <Ionicons name={statusLabel.icon} size={9} color="#FFF" />
-            <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.3 }}>
+            <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.3, fontFamily: Platform.OS === 'web' ? 'system-ui, -apple-system, sans-serif' : undefined }}>
               {statusLabel.text}
             </Text>
           </View>
