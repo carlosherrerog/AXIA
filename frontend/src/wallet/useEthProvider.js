@@ -10,7 +10,8 @@ export function useEthProvider() {
     const { useWeb3ModalProvider } = require('@web3modal/ethers/react');
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const { walletProvider } = useWeb3ModalProvider();
-    return { ethProvider: window.ethereum || walletProvider || null };
+    // Preferir walletProvider (conexión activa de Web3Modal) sobre window.ethereum crudo
+    return { ethProvider: walletProvider || window.ethereum || null };
   } catch {
     return { ethProvider: (typeof window !== 'undefined' ? window.ethereum : null) || null };
   }
