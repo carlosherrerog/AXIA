@@ -3,6 +3,34 @@ import { ethers } from 'ethers';
 
 // Floor absoluto por si la red devuelve 0 o un valor muy bajo
 const FLOOR_PRIORITY_FEE = ethers.parseUnits('25', 'gwei');
+
+const AMOY_CHAIN_ID = '0x13882'; // 80002
+
+async function ensureAmoyNetwork(rawProvider) {
+  const chainId = await rawProvider.request({ method: 'eth_chainId' });
+  if (chainId === AMOY_CHAIN_ID) return;
+  try {
+    await rawProvider.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: AMOY_CHAIN_ID }],
+    });
+  } catch (e) {
+    if (e.code === 4902 || e.code === -32603) {
+      await rawProvider.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: AMOY_CHAIN_ID,
+          chainName: 'Polygon Amoy Testnet',
+          nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+          rpcUrls: ['https://rpc-amoy.polygon.technology'],
+          blockExplorerUrls: ['https://amoy.polygonscan.com'],
+        }],
+      });
+    } else {
+      throw e;
+    }
+  }
+}
 // Margen sobre el valor que devuelva la red (+20%)
 const GAS_MARGIN = 120n;
 
@@ -44,17 +72,20 @@ export function useEthProvider() {
 
     if (isNativeExtension) {
       await win.ethereum.request({ method: 'eth_requestAccounts' });
+      await ensureAmoyNetwork(win.ethereum);
       const provider = applyMinGasFee(new ethers.BrowserProvider(win.ethereum));
       return provider.getSigner();
     }
 
     if (walletProvider) {
+      await ensureAmoyNetwork(walletProvider);
       const provider = applyMinGasFee(new ethers.BrowserProvider(walletProvider));
       return provider.getSigner();
     }
 
     if (win?.ethereum) {
       await win.ethereum.request({ method: 'eth_requestAccounts' });
+      await ensureAmoyNetwork(win.ethereum);
       const provider = applyMinGasFee(new ethers.BrowserProvider(win.ethereum));
       return provider.getSigner();
     }
