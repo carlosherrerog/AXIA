@@ -9,6 +9,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useFocusEffect } from '@react-navigation/native';
 import { useEthProvider } from '../wallet/useEthProvider';
 import api, { getToken, WS_URL } from '../api/api';
+import { waitForTx } from '../utils/txUtils';
 import GlobalHeader from '../components/GlobalHeader';
 import WatchCardForWatchmaker from '../components/WatchCardForWatchmaker';
 import UserInfo from '../components/UserInfo';
@@ -175,7 +176,7 @@ export default function WatchmakerScreen({ navigation }) {
         const watchNFT = new ethers.Contract(WATCHNFT_ADDRESS, WATCHNFT_ABI, signer);
         const description = periComment.trim() || "Autenticidad restaurada tras re-certificación.";
         const tx = await watchNFT.restoreAuthenticity(selectedWatch.token_id, description);
-        await tx.wait();
+        await waitForTx(tx);
 
       } else if (!isReverification) {
         // Venta P2P: la firma en MetaMask debe confirmar antes de actualizar el backend.
@@ -184,7 +185,7 @@ export default function WatchmakerScreen({ navigation }) {
         const signer      = await getConnectedSigner();
         const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MARKETPLACE_ABI, signer);
         const tx = await marketplace.verifyAuthenticity(selectedWatch.token_id, isVerifySuccess);
-        await tx.wait();
+        await waitForTx(tx);
       }
       // Re-certificación rechazada: sin firma, solo backend
 
