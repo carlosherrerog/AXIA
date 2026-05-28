@@ -224,6 +224,7 @@ export default function WatchmakerScreen({ navigation }) {
         loading={loading}
         onWalletChange={handleWalletChange}
         forceDark
+        showHamburger
       />
 
       <ScrollView style={[userStyles.container, { paddingHorizontal: 20 }]} contentContainerStyle={{ paddingBottom: 100 }}>
@@ -235,6 +236,7 @@ export default function WatchmakerScreen({ navigation }) {
         </View>
 
         <UserInfo
+          noMargin
           loggedUser={loggedUser}
           onSettings={() => navigation.navigate('Configuracion')}
         />

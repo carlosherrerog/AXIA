@@ -242,13 +242,11 @@ export default function GlobalHeader({
   };
 
   const moreMenuItems = [
-    ...(isMobile ? [
-      {
-        icon: 'information-circle-outline', label: 'Información', color: colors.textSecondary,
-        onPress: () => { setMoreMenuVisible(false); navigation?.navigate('Info'); },
-      },
-      { divider: true },
-    ] : []),
+    {
+      icon: 'information-circle-outline', label: 'Información', color: colors.textSecondary,
+      onPress: () => { setMoreMenuVisible(false); navigation?.navigate('Info'); },
+    },
+    { divider: true },
     {
       icon: 'log-out-outline', label: 'Cerrar sesión', color: '#f43f5e',
       onPress: handleLogout,
