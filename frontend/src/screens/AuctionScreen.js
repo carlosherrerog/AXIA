@@ -16,6 +16,7 @@ import { watchScreenStyles } from '../themes/styles.js';
 import WatchAuction_ABI from '../contracts/WatchAuction.json';
 import MockUSDC_ABI from '../contracts/MockUSDC.json';
 import { waitForTx, openMetaMask } from '../utils/txUtils';
+import { isMobileWithoutWallet } from '../wallet/useEthProvider';
 
 const AUCTION_ADDRESS = process.env.EXPO_PUBLIC_AUCTION_ADDRESS    || '0x701EAa91aeB8588694B116C004D1EaAC7f55F2F2';
 const USDC_ADDRESS    = process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS || '0x967187957d31d0912aE57cad1B51F764339AaEe6';
@@ -132,6 +133,7 @@ export default function AuctionScreen({ route, navigation }) {
     wallet ? appUsers.find(u => u.wallet_address?.toLowerCase() === wallet.toLowerCase()) : null;
 
   const handlePlaceBid = async () => {
+    if (isMobileWithoutWallet()) { showAlert('Billetera no detectada', 'Prueba desde el ordenador con MetaMask instalado, o instala la app en Android.', 'warning'); return; }
     if (!ethProvider) { showAlert('Error', 'Necesitas una wallet conectada.', 'error'); return; }
     const amount = parseFloat(bidAmount);
     const minBid = Math.max(auction.highest_bid, auction.min_price);
@@ -178,6 +180,7 @@ export default function AuctionScreen({ route, navigation }) {
   };
 
   const executeEndAuction = async () => {
+    if (isMobileWithoutWallet()) { showAlert('Billetera no detectada', 'Prueba desde el ordenador con MetaMask instalado, o instala la app en Android.', 'warning'); return; }
     if (!ethProvider) { showAlert('Error', 'Necesitas una wallet conectada.', 'error'); return; }
     const noWinner = !auction.highest_bidder || auction.highest_bid === 0;
     try {

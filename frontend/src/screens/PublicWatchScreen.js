@@ -10,6 +10,7 @@ import { useEthProvider } from '../wallet/useEthProvider';
 import { colors, watchScreenStyles, alertColors, globalStyles, alertStyles, WATCH_STATES, roleColors } from '../themes/styles.js';
 import { resolveImageUri } from '../utils/ipfs';
 import { waitForTx, openMetaMask } from '../utils/txUtils';
+import { isMobileWithoutWallet } from '../wallet/useEthProvider';
 import GlobalHeader from '../components/GlobalHeader';
 import WatchHistoryTab from '../components/WatchHistoryTab';
 import WatchDetailsTab from '../components/WatchDetailsTab';
@@ -117,6 +118,9 @@ export default function PublicWatchScreen({ route, navigation }) {
   // --- HANDLERS DE ACCIÓN ---
 
   const handleBuyClick = async () => {
+    if (isMobileWithoutWallet()) {
+      return showAlert("Billetera no detectada", "Prueba desde el ordenador con MetaMask instalado, o instala la app en Android.");
+    }
     if (loggedUser?.id === watchData?.owner_id) {
       return showAlert("Acción no permitida", "No puedes comprar tu propio activo.");
     }

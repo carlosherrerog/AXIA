@@ -1,6 +1,14 @@
 import { Platform } from 'react-native';
 import { ethers } from 'ethers';
 
+export function isMobileWithoutWallet() {
+  if (Platform.OS !== 'web') return false;
+  const win = typeof window !== 'undefined' ? window : null;
+  if (win?.ethereum?.isMetaMask) return false;
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  return /android|iphone|ipad|ipod|mobile/i.test(ua);
+}
+
 // Floor absoluto por si la red devuelve 0 o un valor muy bajo
 const FLOOR_PRIORITY_FEE = ethers.parseUnits('25', 'gwei');
 

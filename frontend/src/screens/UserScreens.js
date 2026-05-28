@@ -18,6 +18,7 @@ import WatchAuction_ABI from '../contracts/WatchAuction.json';
 import WatchNFT_ABI     from '../contracts/WatchNFT.json';
 import MockUSDC_ABI     from '../contracts/MockUSDC.json';
 import { waitForTx, openMetaMask } from '../utils/txUtils';
+import { isMobileWithoutWallet } from '../wallet/useEthProvider';
 
 const AUCTION_ADDRESS = process.env.EXPO_PUBLIC_AUCTION_ADDRESS      || '0x701EAa91aeB8588694B116C004D1EaAC7f55F2F2';
 const NFT_ADDRESS     = process.env.EXPO_PUBLIC_WATCH_NFT_ADDRESS     || '0xbBfCa1b8404Dc43238C4A359E8454632f00c292F';
@@ -371,6 +372,7 @@ export default function UserDashboardScreen({ route, navigation }) {
     const dur   = parseInt(duration, 10);
     if (isNaN(price) || price <= 0) { showAlert('Error', 'Precio mínimo inválido.', 'error'); return; }
     if (isNaN(dur)   || dur   <= 0) { showAlert('Error', 'Duración inválida.', 'error');       return; }
+    if (isMobileWithoutWallet()) { showAlert('Billetera no detectada', 'Prueba desde el ordenador con MetaMask instalado, o instala la app en Android.', 'warning'); return; }
     if (!ethProvider) { showAlert('Error', 'Necesitas una wallet conectada.', 'error'); return; }
 
     try {
