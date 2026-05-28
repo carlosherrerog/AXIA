@@ -837,7 +837,21 @@ def import_and_save_nft(token_id: int, db: Session = Depends(database.get_db), c
 
         # 3. Reconstruir historial de propietarios desde eventos blockchain
         try:
-            chain_history = blockchain.get_ownership_history_from_chain(token_id)
+            # Estimar el bloque de minteo desde mint_date (Amoy ≈ 2 bloques/seg)
+            # para no escanear desde DEPLOY_BLOCK innecesariamente
+            from_block_estimate = blockchain.DEPLOY_BLOCK
+            if watch.mint_date:
+                try:
+                    from datetime import timezone as _tz
+                    now_utc = datetime.now(_tz.utc)
+                    mint_utc = watch.mint_date.replace(tzinfo=_tz.utc) if watch.mint_date.tzinfo is None else watch.mint_date
+                    age_secs = (now_utc - mint_utc).total_seconds()
+                    current_blk = blockchain.w3_public.eth.block_number
+                    estimated = int(current_blk - age_secs * 2) - 2000  # -2000 bloques de margen
+                    from_block_estimate = max(blockchain.DEPLOY_BLOCK, estimated)
+                except Exception:
+                    pass
+            chain_history = blockchain.get_ownership_history_from_chain(token_id, from_block=from_block_estimate)
             for entry in chain_history:
                 db.add(models.WatchOwnershipHistory(
                     token_id=token_id,
@@ -1248,8 +1262,10 @@ def get_nft_details(token_id: int, db: Session = Depends(database.get_db)):
     if not watch:
         raise HTTPException(status_code=404, detail="Reloj no encontrado en la base de datos local. Por favor, impórtalo primero.")
 
-    # Leer historial directamente de la blockchain para garantizar datos siempre actualizados
-    chain_history = blockchain.get_ownership_history_from_chain(token_id)
+    # Leer historial desde la BD (se sincroniza al importar/reimportar)
+    db_history = db.query(models.WatchOwnershipHistory).filter(
+        models.WatchOwnershipHistory.token_id == token_id
+    ).order_by(models.WatchOwnershipHistory.transferred_at.asc()).all()
 
     return {
         "token_id": watch.token_id,
@@ -1269,13 +1285,13 @@ def get_nft_details(token_id: int, db: Session = Depends(database.get_db)):
         "mint_date": watch.mint_date.isoformat() if watch.mint_date else None,
         "history": [
             {
-                "previous_owner_wallet": h.get("previous_owner_wallet"),
-                "new_owner_wallet": h.get("new_owner_wallet"),
-                "via_contract_wallet": h.get("via_contract_wallet"),
-                "price_usdc": h.get("price_usdc"),
-                "transferred_at": h["transferred_at"].isoformat() if h.get("transferred_at") else None,
+                "previous_owner_wallet": h.previous_owner_wallet,
+                "new_owner_wallet": h.new_owner_wallet,
+                "via_contract_wallet": h.via_contract_wallet,
+                "price_usdc": h.price_usdc,
+                "transferred_at": h.transferred_at.isoformat() if h.transferred_at else None,
             }
-            for h in chain_history
+            for h in db_history
         ],
     }
 
@@ -2647,7 +2663,9 @@ def get_public_watch_details(token_id: int, db: Session = Depends(database.get_d
     if not watch:
         raise HTTPException(status_code=404, detail="Reloj no encontrado en la base de datos")
 
-    chain_history = blockchain.get_ownership_history_from_chain(token_id)
+    db_history = db.query(models.WatchOwnershipHistory).filter(
+        models.WatchOwnershipHistory.token_id == token_id
+    ).order_by(models.WatchOwnershipHistory.transferred_at.asc()).all()
 
     return {
         "token_id": watch.token_id,
@@ -2665,13 +2683,13 @@ def get_public_watch_details(token_id: int, db: Session = Depends(database.get_d
         "manufacturer_wallet": watch.manufacturer_wallet,
         "history": [
             {
-                "previous_owner_wallet": h.get("previous_owner_wallet"),
-                "new_owner_wallet": h.get("new_owner_wallet"),
-                "via_contract_wallet": h.get("via_contract_wallet"),
-                "price_usdc": h.get("price_usdc"),
-                "transferred_at": h["transferred_at"].isoformat() if h.get("transferred_at") else None,
+                "previous_owner_wallet": h.previous_owner_wallet,
+                "new_owner_wallet": h.new_owner_wallet,
+                "via_contract_wallet": h.via_contract_wallet,
+                "price_usdc": h.price_usdc,
+                "transferred_at": h.transferred_at.isoformat() if h.transferred_at else None,
             }
-            for h in chain_history
+            for h in db_history
         ],
         "revisions": watch.revisions,
         "verifications": watch.verifications,
@@ -2966,7 +2984,20 @@ async def place_bid(token_id: int, payload: dict, db: Session = Depends(database
 def _resync_ownership_history(token_id: int, db: Session):
     """Re-sincroniza watch_ownership_history desde la blockchain para un token dado."""
     try:
-        new_history = blockchain.get_ownership_history_from_chain(token_id)
+        from_block_estimate = blockchain.DEPLOY_BLOCK
+        watch_for_block = db.query(models.Watch).filter(models.Watch.token_id == token_id).first()
+        if watch_for_block and watch_for_block.mint_date:
+            try:
+                from datetime import timezone as _tz
+                now_utc = datetime.now(_tz.utc)
+                mint_utc = watch_for_block.mint_date.replace(tzinfo=_tz.utc) if watch_for_block.mint_date.tzinfo is None else watch_for_block.mint_date
+                age_secs = (now_utc - mint_utc).total_seconds()
+                current_blk = blockchain.w3_public.eth.block_number
+                estimated = int(current_blk - age_secs * 2) - 2000
+                from_block_estimate = max(blockchain.DEPLOY_BLOCK, estimated)
+            except Exception:
+                pass
+        new_history = blockchain.get_ownership_history_from_chain(token_id, from_block=from_block_estimate)
     except Exception as e:
         print(f"[resync] Error leyendo cadena para token {token_id}: {e}")
         return

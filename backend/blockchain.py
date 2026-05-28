@@ -60,8 +60,8 @@ watchNFT_contract_public = None
 marketplace_contract_public = None
 
 # Bloque desde el que empezar a buscar eventos (despliegue del contrato en Amoy)
-DEPLOY_BLOCK = int(os.getenv("DEPLOY_BLOCK", "38000000"))
-LOG_CHUNK_SIZE = 2000  # bloques por chunk — compatible con Alchemy y RPC público
+DEPLOY_BLOCK = int(os.getenv("DEPLOY_BLOCK", "39000000"))
+LOG_CHUNK_SIZE = 50000  # bloques por chunk — 50k es seguro para Alchemy y RPC público
 
 def get_logs_paginated(event, from_block: int, to_block, argument_filters: dict = None) -> list:
     """Divide get_logs en chunks para no superar el límite de rango de cualquier RPC."""
@@ -263,7 +263,7 @@ def get_full_watch_profile(token_id: int) -> dict:
         raise ValueError(f"Error sincronizando datos desde blockchain: {str(e)}")
 
 
-def get_ownership_history_from_chain(token_id: int) -> list:
+def get_ownership_history_from_chain(token_id: int, from_block: int = None) -> list:
     """
     Reconstruye el historial de propietarios de un NFT leyendo los eventos
     Transfer de WatchNFT y SaleCompleted de WatchMarketplace.
@@ -272,11 +272,13 @@ def get_ownership_history_from_chain(token_id: int) -> list:
     if not watchNFT_contract:
         return []
 
+    start_block = from_block if from_block is not None else DEPLOY_BLOCK
+
     try:
         # 1. Leer todos los eventos Transfer para este tokenId
         transfer_logs = get_logs_paginated(
             watchNFT_contract_public.events.Transfer,
-            DEPLOY_BLOCK, 'latest',
+            start_block, 'latest',
             argument_filters={'tokenId': token_id}
         )
     except Exception as e:
@@ -289,7 +291,7 @@ def get_ownership_history_from_chain(token_id: int) -> list:
         try:
             sale_logs = get_logs_paginated(
                 marketplace_contract_public.events.SaleCompleted,
-                DEPLOY_BLOCK, 'latest',
+                start_block, 'latest',
                 argument_filters={'tokenId': token_id}
             )
             for s in sale_logs:
