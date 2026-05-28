@@ -646,8 +646,8 @@ export default function WatchScreen({ route, navigation }) {
       });
 
       setActionLoading(false);
-      
-      setTransferSuccessVisible(true);
+      setMetaMaskLoading(false);
+      navigation.navigate('Perfil');
 
     } catch (error) {
       setActionLoading(false);
@@ -1762,12 +1762,12 @@ export default function WatchScreen({ route, navigation }) {
             <Ionicons name="checkmark-circle" size={55} color={alertColors.success} />
             <Text style={alertStyles.title}>¡Completado!</Text>
             <Text style={alertStyles.message}>
-              El reloj ha sido transferido. Ya puedes volver a tu perfil manualmente.
+              El reloj ha sido transferido correctamente.
             </Text>
             <TouchableOpacity
               onPress={() => {
                 setTransferSuccessVisible(false);
-                navigation.goBack();
+                navigation.navigate('Perfil');
               }}
               style={[globalStyles.primaryButton, alertStyles.singleButton]}
             >
