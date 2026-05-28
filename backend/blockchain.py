@@ -27,6 +27,14 @@ ADMIN_ADDRESS = os.getenv("MY_ADDRESS")
 PINATA_API_KEY = os.getenv("PINATA_API_KEY")
 PINATA_SECRET_KEY = os.getenv("PINATA_SECRET_KEY")
 
+# Polygonscan/Etherscan API v2 para consultar eventos sin límite de rango
+POLYGONSCAN_API_KEY = os.getenv("POLYGONSCAN_API_KEY")
+POLYGONSCAN_API_URL = "https://api.etherscan.io/v2/api"
+POLYGONSCAN_CHAIN_ID = "80002"  # Polygon Amoy
+# topic0 precalculados
+_TOPIC_TRANSFER       = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+_TOPIC_SALE_COMPLETED = "0x1b44502901e931a03e1ed724d3d7746167e9699a6831744cc24066c94ee414f0"
+
 w3 = Web3(Web3.HTTPProvider(RPC_URL))
 
 # RPC público para get_logs — Alchemy rechaza rangos amplios (from_block=0) con 400
@@ -228,92 +236,95 @@ def get_full_watch_profile(token_id: int) -> dict:
         raise ValueError(f"Error sincronizando datos desde blockchain: {str(e)}")
 
 
-def _get_transfers_alchemy(token_id: int) -> list:
-    """
-    Obtiene todas las transferencias ERC721 de un token usando alchemy_getAssetTransfers.
-    Sin límite de rango de bloques — Alchemy gestiona la paginación internamente.
-    """
-    from datetime import datetime, timezone
-    results = []
-    page_key = None
-    while True:
-        params = {
-            "fromBlock": "0x0",
-            "toBlock": "latest",
-            "contractAddresses": [WATCH_NFT_ADDRESS],
-            "category": ["erc721"],
-            "withMetadata": True,
-            "excludeZeroValue": False,
-            "maxCount": "0x3e8",
-        }
-        if page_key:
-            params["pageKey"] = page_key
-        try:
-            resp = requests.post(RPC_URL, json={
-                "jsonrpc": "2.0",
-                "method": "alchemy_getAssetTransfers",
-                "params": [params],
-                "id": 1,
-            }, timeout=30)
-            resp.raise_for_status()
-            data = resp.json().get("result", {})
-        except Exception as e:
-            print(f"[blockchain] alchemy_getAssetTransfers error: {e}")
-            break
-
-        for t in data.get("transfers", []):
-            tid_hex = t.get("erc721TokenId") or "0x0"
-            try:
-                if int(tid_hex, 16) != token_id:
-                    continue
-            except Exception:
-                continue
-            ts = None
-            raw_ts = (t.get("metadata") or {}).get("blockTimestamp")
-            if raw_ts:
-                try:
-                    ts = datetime.fromisoformat(raw_ts.replace("Z", "+00:00"))
-                except Exception:
-                    pass
-            results.append({
-                "previous_owner_wallet": t["from"],
-                "new_owner_wallet": t["to"],
-                "block_number": int(t["blockNum"], 16),
-                "transferred_at": ts,
-            })
-
-        page_key = data.get("pageKey")
-        if not page_key:
-            break
-
-    print(f"[blockchain] alchemy_getAssetTransfers token {token_id}: {len(results)} transfers")
-    return results
+def _polygonscan_get_logs(address: str, topic0: str, topic1: str = None) -> list:
+    """Consulta eventos via Etherscan API v2 (Polygon Amoy). Sin límite de rango de bloques."""
+    params = {
+        "chainid": POLYGONSCAN_CHAIN_ID,
+        "module": "logs",
+        "action": "getLogs",
+        "address": address,
+        "topic0": topic0,
+        "fromBlock": "0",
+        "toBlock": "latest",
+        "apikey": POLYGONSCAN_API_KEY,
+    }
+    if topic1:
+        params["topic1"] = topic1
+        params["topic0_1_opr"] = "and"
+    try:
+        resp = requests.get(POLYGONSCAN_API_URL, params=params, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("status") == "1":
+            return data.get("result", [])
+        print(f"[blockchain] Polygonscan getLogs: {data.get('message')} — {data.get('result')}")
+    except Exception as e:
+        print(f"[blockchain] Polygonscan getLogs error: {e}")
+    return []
 
 
 def get_ownership_history_from_chain(token_id: int, from_block: int = None) -> list:
     """
-    Reconstruye el historial de propietarios de un NFT via alchemy_getAssetTransfers.
-    eth_getLogs no está disponible en Alchemy/Amoy — precios siempre None.
+    Reconstruye el historial de propietarios de un NFT via Etherscan/Polygonscan API v2.
+    Sin límites de rango de bloques. Incluye precios de SaleCompleted.
     """
-    if not watchNFT_contract:
+    from datetime import datetime, timezone
+
+    if not POLYGONSCAN_API_KEY:
+        print("[blockchain] POLYGONSCAN_API_KEY no configurada — historial no disponible")
         return []
 
-    transfer_list = _get_transfers_alchemy(token_id)
-    if not transfer_list:
+    # tokenId como topic (32 bytes, hex)
+    token_id_topic = "0x" + hex(token_id)[2:].zfill(64)
+
+    # 1. Eventos Transfer del NFT filtrados por tokenId (topic3)
+    raw_transfers = _polygonscan_get_logs(WATCH_NFT_ADDRESS, _TOPIC_TRANSFER, topic1=None)
+    # Polygonscan no filtra por topic3 directamente en todos los casos — filtramos en Python
+    raw_transfers = [
+        log for log in raw_transfers
+        if len(log.get("topics", [])) >= 4 and log["topics"][3] == token_id_topic
+    ]
+    print(f"[blockchain] Polygonscan Transfer token {token_id}: {len(raw_transfers)} eventos")
+
+    if not raw_transfers:
         return []
 
-    # Construir raw — sin precios (eth_getLogs no disponible en Amoy)
+    # 2. Eventos SaleCompleted del marketplace (tokenId en topic1)
+    sale_logs = _polygonscan_get_logs(MARKETPLACE_ADDRESS, _TOPIC_SALE_COMPLETED, topic1=token_id_topic)
+    sale_price_by_block = {}
+    for s in sale_logs:
+        try:
+            block_num = int(s["blockNumber"], 16)
+            price_usdc = int(s["data"], 16) / 10**6
+            sale_price_by_block[block_num] = price_usdc
+        except Exception:
+            pass
+    print(f"[blockchain] Polygonscan SaleCompleted token {token_id}: {len(sale_logs)} eventos")
+
+    # 3. Construir raw
     raw = []
-    for t in transfer_list:
-        block_num = t["block_number"]
-        raw.append({
-            "previous_owner_wallet": t["previous_owner_wallet"],
-            "new_owner_wallet":      t["new_owner_wallet"],
-            "via_contract_wallet":   None,
-            "price_usdc":            None,
-            "transferred_at":        t["transferred_at"],
-            "block_number":          block_num,
-        })
+    for log in raw_transfers:
+        try:
+            block_num = int(log["blockNumber"], 16)
+            from_addr = "0x" + log["topics"][1][-40:]
+            to_addr   = "0x" + log["topics"][2][-40:]
+            # Normalizar a checksum address
+            from_addr = Web3.to_checksum_address(from_addr)
+            to_addr   = Web3.to_checksum_address(to_addr)
+            ts = None
+            if log.get("timeStamp"):
+                ts = datetime.fromtimestamp(int(log["timeStamp"], 16), tz=timezone.utc)
+            raw.append({
+                "previous_owner_wallet": from_addr,
+                "new_owner_wallet":      to_addr,
+                "via_contract_wallet":   None,
+                "price_usdc":            sale_price_by_block.get(block_num),
+                "transferred_at":        ts,
+                "block_number":          block_num,
+            })
+        except Exception as e:
+            print(f"[blockchain] Error procesando Transfer log: {e}")
+            continue
 
     # 4. Fusionar transferencias de contratos usando máquina de estados.
     #    Esto detecta correctamente subastas incluso cuando hay múltiples pruebas
