@@ -17,6 +17,7 @@ import Marketplace_ABI from '../contracts/WatchMarketplace.json';
 import UserAndWatchCard from '../components/UserAndWatchCard';
 import GlobalHeader from '../components/GlobalHeader';
 import { resolveImageUri } from '../utils/ipfs';
+import { waitForTx } from '../utils/txUtils';
 import WatchHistoryTab from '../components/WatchHistoryTab';
 
 const NFT_ADDRESS         = process.env.EXPO_PUBLIC_WATCH_NFT_ADDRESS     || '0xbBfCa1b8404Dc43238C4A359E8454632f00c292F';
@@ -264,14 +265,14 @@ export default function WatchScreen({ route, navigation }) {
           throw new Error(`Necesitas al menos ${needed} USDC como fianza para listar. Saldo actual: ${(Number(usdcBalance) / 1e6).toFixed(2)} USDC.`);
         }
         const usdcApproveTx = await usdcContract.approve(MARKETPLACE_ADDRESS, sellerDeposit);
-        await usdcApproveTx.wait();
+        await waitForTx(usdcApproveTx);
       }
 
       const nftApproveTx = await nftContract.approve(MARKETPLACE_ADDRESS, watchId);
-      await nftApproveTx.wait();
+      await waitForTx(nftApproveTx);
 
       const listTx = await marketplaceContract.listWatch(watchId, priceInWei);
-      receipt = await listTx.wait();
+      receipt = await waitForTx(listTx);
     } catch (error) {
       if (error.code === 'ACTION_REJECTED') {
         Alert.alert("Cancelado", "Has rechazado la transacción.");
@@ -340,7 +341,7 @@ export default function WatchScreen({ route, navigation }) {
       }
       const marketplaceContract = new ethers.Contract(MARKETPLACE_ADDRESS, Marketplace_ABI.abi, signer);
       const tx = await marketplaceContract.cancelListing(watchId);
-      await tx.wait();
+      await waitForTx(tx);
       txHash = tx.hash;
     } catch (error) {
       console.error('handleCancelListing blockchain error:', error);
@@ -406,11 +407,11 @@ export default function WatchScreen({ route, navigation }) {
       if (!isManufacturer && listingData?.is_p2p !== false && priceInWei > currentPriceInWei) {
         const newDeposit = (priceInWei * 200n) / 10000n;
         const approveTx = await usdcContract.approve(MARKETPLACE_ADDRESS, newDeposit);
-        await approveTx.wait();
+        await waitForTx(approveTx);
       }
 
       const tx = await marketplaceContract.updateListingPrice(watchId, priceInWei);
-      await tx.wait();
+      await waitForTx(tx);
       txHash = tx.hash;
     } catch (error) {
       if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
@@ -491,7 +492,7 @@ export default function WatchScreen({ route, navigation }) {
       const nftContract = new ethers.Contract(NFT_ADDRESS, WatchNFT_ABI.abi, signer);
 
       const tx = await nftContract.changeSecurityState(watchId, newStateId);
-      await tx.wait();
+      await waitForTx(tx);
 
       await api.patch(`/nfts/${watchId}/security-state`, {
         state: newStateId,
@@ -525,7 +526,7 @@ export default function WatchScreen({ route, navigation }) {
       const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, Marketplace_ABI.abi, signer);
 
       const tx = await marketplace.confirmDelivery(watchId);
-      await tx.wait();
+      await waitForTx(tx);
 
       await api.post(`/marketplace/confirm-delivery/${watchId}`);
 
@@ -599,7 +600,7 @@ export default function WatchScreen({ route, navigation }) {
       const nftContract = new ethers.Contract(NFT_ADDRESS, WatchNFT_ABI.abi, signer);
 
       const tx = await nftContract.transferFrom(userAddress, recipientWallet, watchId);
-      await tx.wait(); 
+      await waitForTx(tx);
 
       await api.post(`/nfts/${watchId}/transfer`, {
         new_owner: recipientWallet,

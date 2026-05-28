@@ -10,6 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useEthProvider } from '../wallet/useEthProvider';
 import api, { getToken, WS_URL } from '../api/api';
 import { resolveImageUri } from '../utils/ipfs';
+import { waitForTx } from '../utils/txUtils';
 import { useTheme } from '../context/ThemeContext';
 import { roleColors } from '../themes/styles';
 import GlobalHeader from '../components/GlobalHeader';
@@ -124,7 +125,7 @@ export default function SaleScreen({ route, navigation }) {
       let blockchainWarning = null;
       try {
         const tx = await marketplace.confirmDelivery(sale.token_id);
-        await tx.wait();
+        await waitForTx(tx);
       } catch (blockchainErr) {
         if (blockchainErr?.code === 'ACTION_REJECTED') throw blockchainErr;
         blockchainWarning = true;
