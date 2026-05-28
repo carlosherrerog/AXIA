@@ -497,8 +497,8 @@ export default function GlobalHeader({
             </TouchableOpacity>
           )}
 
-          {/* Avatar dropdown — solo escritorio, usuario logueado */}
-          {!isMobile && localUser?.id && (
+          {/* Avatar dropdown — escritorio siempre; móvil solo si no hay hamburguesa */}
+          {localUser?.id && (!isMobile || !showHamburger) && (
             <TouchableOpacity
               onPress={() => setMoreMenuVisible(v => !v)}
               style={{
