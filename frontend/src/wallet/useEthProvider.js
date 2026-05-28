@@ -7,9 +7,9 @@ export function isMobileWithoutWallet() {
   return /android|iphone|ipad|ipod|mobile/i.test(ua);
 }
 
-const FLOOR_PRIORITY_FEE = ethers.parseUnits('50',  'gwei');
-const FLOOR_MAX_FEE      = ethers.parseUnits('150', 'gwei');
-const BASE_FEE_BUFFER    = ethers.parseUnits('50',  'gwei'); // margen sobre baseFee
+const FLOOR_PRIORITY_FEE = ethers.parseUnits('300', 'gwei');
+const FLOOR_MAX_FEE      = ethers.parseUnits('600', 'gwei');
+const BASE_FEE_BUFFER    = ethers.parseUnits('200', 'gwei');
 
 const AMOY_CHAIN_ID = '0x13882'; // 80002
 
@@ -38,8 +38,8 @@ async function ensureAmoyNetwork(rawProvider) {
     }
   }
 }
-// Margen sobre el valor que devuelva la red (+50%)
-const GAS_MARGIN = 150n;
+// Margen sobre el valor que devuelva la red (+200%)
+const GAS_MARGIN = 300n;
 
 function applyMinGasFee(provider) {
   const _getFeeData = provider.getFeeData.bind(provider);
