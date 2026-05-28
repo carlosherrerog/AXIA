@@ -434,15 +434,9 @@ export default function UserDashboardScreen({ route, navigation }) {
         <View style={{ paddingHorizontal: hPad, paddingTop: 16 }}>
           <UserInfo
             noMargin
-            forceExpanded
             loggedUser={loggedUser}
             showAlert={showAlert}
             onSettings={() => navigation.navigate('Configuracion')}
-            stats={isDealer && myNfts.length > 0 ? [
-              { label: 'En colección', value: myNfts.length },
-              { label: 'En venta',     value: myNfts.filter(n => n.is_listed && !n.is_buyer).length },
-              { label: 'Comprando',    value: myNfts.filter(n => n.is_buyer).length },
-            ] : []}
           />
         </View>
 

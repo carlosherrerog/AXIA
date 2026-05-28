@@ -163,11 +163,7 @@ export default function ManufacturerScreen({ navigation }) {
             noMargin
             loggedUser={loggedUser}
             showAlert={showAlert}
-            forceExpanded
-            stats={[
-              { label: 'En Stock', value: stock.length },
-              { label: 'En Venta', value: listed.length },
-            ]}
+            onSettings={() => navigation.navigate('Configuracion')}
           />
 
           {/* Sección: configuración de la herramienta */}
