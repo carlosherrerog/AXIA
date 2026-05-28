@@ -757,12 +757,7 @@ export default function WatchScreen({ route, navigation }) {
             </View>
           )}
           
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ borderTopWidth: 1, borderColor: colors.border }}
-            contentContainerStyle={{ flexDirection: 'row' }}
-          >
+          <View style={watchScreenStyles.tabRow}>
             {tabsToRender.map((tab) => {
               const tabMeta = {
                 details:         { label: 'Detalles',         icon: 'information-circle-outline' },
@@ -781,7 +776,6 @@ export default function WatchScreen({ route, navigation }) {
                   style={[
                     watchScreenStyles.tabButton,
                     {
-                      minWidth: 72,
                       borderBottomWidth: (isActive && !isSecurityBlocked && !isAltered) ? 2 : 0,
                       borderBottomColor: isActive ? colors.primary : 'transparent',
                       backgroundColor: (isActive && (isSecurityBlocked || isAltered)) ? currentStateInfo.color + '18' : 'transparent',
@@ -804,7 +798,7 @@ export default function WatchScreen({ route, navigation }) {
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
+          </View>
         </View>
 
         {/* --- PESTAÑA DETALLES CON EL SWITCH DE PRIVACIDAD --- */}
