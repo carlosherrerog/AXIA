@@ -229,26 +229,12 @@ export default function WatchmakerScreen({ navigation }) {
       <ScrollView style={[userStyles.container, { paddingHorizontal: 20 }]} contentContainerStyle={{ paddingBottom: 100 }}>
 
         {/* CABECERA */}
-        <View style={{ marginTop: 20, marginBottom: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View>
-            <Text style={userStyles.welcomeText}>Panel de Trabajo</Text>
-            <Text style={[userStyles.userBadge, { color: roleColors.RELOJERO }]}>Relojero Autorizado</Text>
-          </View>
-          <TouchableOpacity
-            onPress={handleLogout}
-            style={{
-              flexDirection: 'row', alignItems: 'center', gap: 6,
-              paddingHorizontal: 14, paddingVertical: 9,
-              backgroundColor: 'rgba(244,63,94,0.1)',
-              borderRadius: 12, borderWidth: 1, borderColor: 'rgba(244,63,94,0.25)',
-            }}
-          >
-            <Ionicons name="log-out-outline" size={16} color="#f43f5e" />
-            <Text style={{ color: '#f43f5e', fontWeight: '700', fontSize: 13 }}>Salir</Text>
-          </TouchableOpacity>
+        <View style={{ marginTop: 20, marginBottom: 20 }}>
+          <Text style={userStyles.welcomeText}>Panel de Trabajo</Text>
+          <Text style={[userStyles.userBadge, { color: roleColors.RELOJERO }]}>Relojero Autorizado</Text>
         </View>
 
-        <UserInfo loggedUser={loggedUser} />
+        <UserInfo loggedUser={loggedUser} forceExpanded />
 
         {/* SECCIÓN PERITAJES */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18, gap: 8 }}>

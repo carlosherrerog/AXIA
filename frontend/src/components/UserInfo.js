@@ -22,11 +22,11 @@ const POL_GREEN  = '#4ade80';
 const fmt = (value, dec = 2) =>
   Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: dec });
 
-export default function UserInfo({ loggedUser, showAlert, stats, onSettings, noMargin = false }) {
+export default function UserInfo({ loggedUser, showAlert, stats, onSettings, noMargin = false, forceExpanded = false }) {
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
   const isWide = width >= 640;
-  const isMobile = width < 768;
+  const isMobile = forceExpanded ? false : width < 768;
 
   const [usdcBalance, setUsdcBalance] = useState('0.00');
   const [polBalance,  setPolBalance]  = useState('0.00');
