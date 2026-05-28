@@ -136,7 +136,6 @@ export default function ManufacturerScreen({ navigation }) {
         navigation={navigation}
         title="Panel Fabricante"
         onWalletChange={handleWalletChange}
-        showHamburger
       />
 
       <ScrollView
