@@ -281,6 +281,7 @@ export default function RoleSelectionScreen({ navigation, route }) {
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
         backgroundColor: cardBg,
+        ...(Platform.OS === 'web' && { position: 'sticky', top: 0, zIndex: 10 }),
         ...(Platform.OS === 'web' && isDark && {
           background: 'linear-gradient(135deg, #13111c 0%, #1a1330 100%)',
         }),
