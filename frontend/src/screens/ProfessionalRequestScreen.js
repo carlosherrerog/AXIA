@@ -147,7 +147,11 @@ export default function ProfessionalRequestScreen({ navigation }) {
         navigation={navigation}
       />
 
-      <View style={[styles.header, { borderBottomWidth: 0 }]}>
+      <View style={[
+        styles.header,
+        { borderBottomWidth: 0 },
+        Platform.OS === 'web' && { position: 'sticky', top: 0, zIndex: 50 },
+      ]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 15 }}>
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
