@@ -2,14 +2,14 @@ import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, FlatList,
   ActivityIndicator, RefreshControl, ScrollView,
-  useWindowDimensions, Modal, TextInput, Platform, Linking,
+  useWindowDimensions, Modal, TextInput, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from '@react-navigation/native';
-import { ethers } from 'ethers';
 import api, { getToken, WS_URL } from '../api/api';
 import GlobalHeader from '../components/GlobalHeader';
+import UserInfo from '../components/UserInfo';
 import WatchCard from '../components/WatchCard';
 import { useTheme } from '../context/ThemeContext';
 import AlertModal, { useAlert } from '../components/AlertModal';
@@ -37,35 +37,6 @@ export default function ManufacturerScreen({ navigation }) {
   const [refreshing, setRefreshing]   = useState(false);
   const [activeTab, setActiveTab]     = useState('all');
   const [infoExpanded, setInfoExpanded] = useState(false);
-  const [usdcBalance, setUsdcBalance] = useState(null);
-  const [polBalance,  setPolBalance]  = useState(null);
-
-  const fmt = (v, dec = 2) =>
-    Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: dec });
-
-  const fetchWalletBalances = useCallback(async (address) => {
-    if (!address) return;
-    try {
-      const provider = new ethers.JsonRpcProvider('https://rpc-amoy.polygon.technology');
-      const pol = await provider.getBalance(address);
-      setPolBalance(fmt(ethers.formatEther(pol), 4));
-      const usdcAddress = process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS || '0x967187957d31d0912aE57cad1B51F764339AaEe6';
-      const contract = new ethers.Contract(
-        usdcAddress,
-        ['function balanceOf(address) view returns (uint256)'],
-        provider,
-      );
-      const usdc = await contract.balanceOf(address);
-      setUsdcBalance(fmt(ethers.formatUnits(usdc, 6), 2));
-    } catch (e) {
-      console.error('Manufacturer wallet balance error:', e);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (loggedUser?.wallet_address) fetchWalletBalances(loggedUser.wallet_address);
-    else { setUsdcBalance(null); setPolBalance(null); }
-  }, [loggedUser?.wallet_address, fetchWalletBalances]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -187,66 +158,17 @@ export default function ManufacturerScreen({ navigation }) {
           width: '100%',
         }}>
 
-          {/* Cabecera */}
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{ color: colors.text, fontSize: 22, fontWeight: 'bold' }}>
-              Panel de Fabricante
-            </Text>
-            {loggedUser?.username ? (
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
-                {loggedUser.username}
-              </Text>
-            ) : null}
-            {loggedUser?.wallet_address && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
-                <TouchableOpacity
-                  onPress={() => Linking.openURL(`https://amoy.polygonscan.com/address/${loggedUser.wallet_address}`)}
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 5,
-                    backgroundColor: '#8b5cf610', borderRadius: 8,
-                    paddingHorizontal: 10, paddingVertical: 6,
-                    borderWidth: 1, borderColor: '#8b5cf625',
-                  }}
-                >
-                  <Ionicons name="open-outline" size={12} color="#8b5cf6" />
-                  <Text style={{ color: '#8b5cf6', fontSize: 11, fontWeight: '700' }}>Polygonscan</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-
-          {/* Tarjetas de estadísticas + saldos */}
-          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-            <StatCard icon="cube-outline"     label="En Stock" value={stock.length}  color="#10b981"        colors={colors} />
-            <StatCard icon="pricetag-outline" label="En Venta" value={listed.length} color={colors.primary} colors={colors} />
-
-            {/* Saldos USDC + POL */}
-            {loggedUser?.wallet_address && (
-              <View style={{
-                flex: 1, minWidth: 180,
-                flexDirection: 'row', gap: 0,
-                backgroundColor: colors.surface, borderRadius: 12,
-                borderWidth: 1, borderColor: colors.border,
-                overflow: 'hidden',
-              }}>
-                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, padding: 14 }}>
-                  <Text style={{ color: colors.textMuted, fontSize: 9, fontWeight: '700', letterSpacing: 0.8 }}>USDC</Text>
-                  <Text style={{ color: '#22c55e', fontSize: 20, fontWeight: '800', letterSpacing: -0.5 }}>
-                    {usdcBalance ?? '—'}
-                  </Text>
-                  <Text style={{ color: colors.textMuted, fontSize: 9 }}>USD Coin</Text>
-                </View>
-                <View style={{ width: 1, backgroundColor: colors.border }} />
-                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, padding: 14 }}>
-                  <Text style={{ color: colors.textMuted, fontSize: 9, fontWeight: '700', letterSpacing: 0.8 }}>POL</Text>
-                  <Text style={{ color: '#4ade80', fontSize: 20, fontWeight: '800', letterSpacing: -0.5 }}>
-                    {polBalance ?? '—'}
-                  </Text>
-                  <Text style={{ color: colors.textMuted, fontSize: 9 }}>Gas · Polygon</Text>
-                </View>
-              </View>
-            )}
-          </View>
+          {/* Perfil — igual que el resto de dashboards */}
+          <UserInfo
+            noMargin
+            loggedUser={loggedUser}
+            showAlert={showAlert}
+            forceExpanded
+            stats={[
+              { label: 'En Stock', value: stock.length },
+              { label: 'En Venta', value: listed.length },
+            ]}
+          />
 
           {/* Sección: configuración de la herramienta */}
           <ToolConfigSection
