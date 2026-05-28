@@ -234,7 +234,10 @@ export default function WatchmakerScreen({ navigation }) {
           <Text style={[userStyles.userBadge, { color: roleColors.RELOJERO }]}>Relojero Autorizado</Text>
         </View>
 
-        <UserInfo loggedUser={loggedUser} forceExpanded />
+        <UserInfo
+          loggedUser={loggedUser}
+          onSettings={() => navigation.navigate('Configuracion')}
+        />
 
         {/* SECCIÓN PERITAJES */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18, gap: 8 }}>

@@ -22,11 +22,10 @@ const POL_GREEN  = '#4ade80';
 const fmt = (value, dec = 2) =>
   Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: dec });
 
-export default function UserInfo({ loggedUser, showAlert, stats, onSettings, noMargin = false, forceExpanded = false }) {
+export default function UserInfo({ loggedUser, showAlert, onSettings, noMargin = false }) {
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
-  const isWide = width >= 640;
-  const isMobile = forceExpanded ? false : width < 768;
+  const isMobile = width < 768;
 
   const [usdcBalance, setUsdcBalance] = useState('0.00');
   const [polBalance,  setPolBalance]  = useState('0.00');
@@ -130,17 +129,17 @@ export default function UserInfo({ loggedUser, showAlert, stats, onSettings, noM
               <Text style={{ fontSize: isMobile ? 14 : 16, fontWeight: '700', color: colors.text, letterSpacing: -0.3 }} numberOfLines={1}>
                 {loggedUser.username}
               </Text>
-              {!isMobile && loggedUser.full_name ? (
+              {loggedUser.full_name ? (
                 <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }} numberOfLines={1} ellipsizeMode="tail">
                   {loggedUser.full_name}
                 </Text>
               ) : null}
-              {!isMobile && loggedUser.email ? (
+              {loggedUser.email ? (
                 <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 1 }} numberOfLines={1} ellipsizeMode="tail">
                   {loggedUser.email}
                 </Text>
               ) : null}
-              {!isMobile && loggedUser.location ? (
+              {loggedUser.location ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
                   <Ionicons name="location-outline" size={11} color={colors.textMuted} />
                   <Text style={{ color: colors.textMuted, fontSize: 11 }} numberOfLines={1} ellipsizeMode="tail">{loggedUser.location}</Text>
@@ -346,29 +345,6 @@ export default function UserInfo({ loggedUser, showAlert, stats, onSettings, noM
         </View>
       ) : null}
 
-      {/* Estadísticas opcionales */}
-      {stats?.length > 0 ? (
-        <View style={{
-          flexDirection: 'row',
-          borderTopWidth: 1, borderTopColor: colors.border,
-        }}>
-          {stats.map((s, i) => (
-            <View key={s.label} style={{
-              flex: 1, alignItems: 'center',
-              paddingVertical: 12,
-              borderRightWidth: i < stats.length - 1 ? 1 : 0,
-              borderRightColor: colors.border,
-            }}>
-              <Text style={{ fontSize: 19, fontWeight: '800', color: colors.primary, letterSpacing: -0.4 }}>
-                {s.value}
-              </Text>
-              <Text style={{ fontSize: 10, color: colors.textMuted, marginTop: 2, textAlign: 'center' }}>
-                {s.label}
-              </Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
 
     </View>
   );
