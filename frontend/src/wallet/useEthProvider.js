@@ -3,8 +3,6 @@ import { ethers } from 'ethers';
 
 export function isMobileWithoutWallet() {
   if (Platform.OS !== 'web') return false;
-  const win = typeof window !== 'undefined' ? window : null;
-  if (win?.ethereum?.isMetaMask) return false;
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
   return /android|iphone|ipad|ipod|mobile/i.test(ua);
 }
