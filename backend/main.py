@@ -2249,6 +2249,14 @@ async def verify_watch(watch_id: int, success: bool, comment: str = "", db: Sess
         db.rollback()
         raise HTTPException(status_code=500, detail="Error guardando en la base de datos.")
 
+    # Espera a que el RPC indexe el evento AuthenticityApproved/Rejected antes de releer
+    await asyncio.sleep(4)
+    _resync_ownership_history(watch.token_id, db)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+
     # Actualizar marketplace para todos + notificar solo a los implicados
     await manager.broadcast("update_marketplace")
     await manager.send_to_user(watch.owner_id, "update_users")   # vendedor
