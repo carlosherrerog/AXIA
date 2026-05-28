@@ -3109,6 +3109,8 @@ async def end_auction(token_id: int, db: Session = Depends(database.get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail="Error al cerrar la subasta.")
 
+    # Espera a que el RPC indexe los eventos Transfer/SaleCompleted antes de releer
+    await asyncio.sleep(4)
     # Re-sincronizar historial de cadena con el nuevo estado (subasta cerrada)
     _resync_ownership_history(token_id, db)
     try:
