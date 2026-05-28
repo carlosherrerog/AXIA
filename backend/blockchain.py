@@ -33,7 +33,9 @@ POLYGONSCAN_API_URL = "https://api.etherscan.io/v2/api"
 POLYGONSCAN_CHAIN_ID = "80002"  # Polygon Amoy
 # topic0 precalculados
 _TOPIC_TRANSFER       = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
-_TOPIC_SALE_COMPLETED = "0x1b44502901e931a03e1ed724d3d7746167e9699a6831744cc24066c94ee414f0"
+_TOPIC_SALE_COMPLETED        = "0x1b44502901e931a03e1ed724d3d7746167e9699a6831744cc24066c94ee414f0"
+_TOPIC_AUTHENTICITY_APPROVED = "0x213ed9c62fc3f1ceb155014ceb9460317e4f4f9736c49c00c0e80f3dbdcd567f"
+_TOPIC_AUTHENTICITY_REJECTED = "0x6220127034fd15fd91b9d561504747d36924c1bce9ca2127fdf6bca19e17069a"
 
 w3 = Web3(Web3.HTTPProvider(RPC_URL))
 
@@ -162,9 +164,33 @@ def get_full_watch_profile(token_id: int) -> dict:
         except Exception:
             pass
 
-        # 4b. Peritajes P2P via AuthenticityApproved/Rejected
-        # Omitido: eth_getLogs no está disponible en este RPC para Amoy.
-        # Los peritajes quedan registrados en watch_verifications via /verify endpoint.
+        # 4b. Peritajes P2P via Polygonscan (AuthenticityApproved / AuthenticityRejected)
+        if POLYGONSCAN_API_KEY:
+            token_id_topic = "0x" + hex(token_id)[2:].zfill(64)
+            try:
+                approved_logs = _polygonscan_get_logs(MARKETPLACE_ADDRESS, _TOPIC_AUTHENTICITY_APPROVED, topic1=token_id_topic)
+                for log in approved_logs:
+                    wm = Web3.to_checksum_address("0x" + log["topics"][2][-40:])
+                    ts = int(log["timeStamp"], 16) if log.get("timeStamp") else 0
+                    verifications_db.append({
+                        "watchmaker": wm,
+                        "date": ts,
+                        "comment": "Peritaje superado en venta P2P — reloj verificado como auténtico."
+                    })
+            except Exception as e:
+                print(f"[blockchain] AuthenticityApproved Polygonscan error: {e}")
+            try:
+                rejected_logs = _polygonscan_get_logs(MARKETPLACE_ADDRESS, _TOPIC_AUTHENTICITY_REJECTED, topic1=token_id_topic)
+                for log in rejected_logs:
+                    wm = Web3.to_checksum_address("0x" + log["topics"][2][-40:])
+                    ts = int(log["timeStamp"], 16) if log.get("timeStamp") else 0
+                    verifications_db.append({
+                        "watchmaker": wm,
+                        "date": ts,
+                        "comment": "Peritaje rechazado — se detectó que el reloj no es auténtico."
+                    })
+            except Exception as e:
+                print(f"[blockchain] AuthenticityRejected Polygonscan error: {e}")
 
         # 5. OBTENER ESTADO DEL MARKETPLACE
         listing_db = None
