@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { ethers } from 'ethers';
 import { useFocusEffect } from '@react-navigation/native';
-import { useEthProvider } from '../wallet/useEthProvider';
+import { useEthProvider, isMobileWithoutWallet } from '../wallet/useEthProvider';
 import api, { getToken, WS_URL } from '../api/api';
 import { resolveImageUri } from '../utils/ipfs';
 import { waitForTx, openMetaMask } from '../utils/txUtils';
@@ -112,6 +112,10 @@ export default function SaleScreen({ route, navigation }) {
   };
 
   const handleConfirmDelivery = async () => {
+    if (isMobileWithoutWallet()) {
+      showAlert('Billetera no detectada', 'Prueba desde el ordenador con MetaMask instalado, o instala la app en Android.', 'warning');
+      return;
+    }
     if (Platform.OS !== 'web' || !ethProvider) {
       showAlert('Wallet requerida', 'Necesitas una wallet conectada para confirmar la entrega.', 'warning');
       return;

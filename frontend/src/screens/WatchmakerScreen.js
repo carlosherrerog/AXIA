@@ -10,6 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useEthProvider } from '../wallet/useEthProvider';
 import api, { getToken, WS_URL } from '../api/api';
 import { waitForTx, openMetaMask } from '../utils/txUtils';
+import { isMobileWithoutWallet } from '../wallet/useEthProvider';
 import GlobalHeader from '../components/GlobalHeader';
 import WatchCardForWatchmaker from '../components/WatchCardForWatchmaker';
 import UserInfo from '../components/UserInfo';
@@ -159,6 +160,9 @@ export default function WatchmakerScreen({ navigation }) {
     // Re-cert aprobada y venta P2P (ambas ok/rechazo) requieren MetaMask
     const needsMetaMask = isReverification ? isVerifySuccess : true;
 
+    if (needsMetaMask && isMobileWithoutWallet()) {
+      return showAlert("Billetera no detectada", "Prueba desde el ordenador con MetaMask instalado, o instala la app en Android.", "error");
+    }
     if (needsMetaMask && (!loggedUser?.wallet_address || typeof ethProvider === 'undefined')) {
       return showAlert("Error", "Wallet no detectada o no conectada.", "error");
     }
