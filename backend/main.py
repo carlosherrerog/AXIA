@@ -2781,9 +2781,10 @@ async def transfer_nft(
 
     # 3. Actualización de todos los campos de propiedad y seguridad
     nft.owner_wallet = request.new_owner
-    nft.owner_id = new_user.id  
+    nft.owner_id = new_user.id
+    nft.is_imported = True
     nft.is_public = False
-    nft.is_listed = False 
+    nft.is_listed = False
 
     watch_name = f"{nft.brand} {nft.model}" if nft.brand and nft.model else f"Reloj #{token_id}"
 
