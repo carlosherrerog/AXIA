@@ -2777,11 +2777,33 @@ async def transfer_nft(
     nft.is_public = False
     nft.is_listed = False 
 
+    watch_name = f"{nft.brand} {nft.model}" if nft.brand and nft.model else f"Reloj #{token_id}"
+
+    notify_sender = models.Notification(
+        user_id=current_user.id,
+        watch_id=token_id,
+        title="Reloj enviado",
+        message=f"Has enviado {watch_name} a {new_user.username}.",
+        type="INFO",
+        created_at=datetime.now(timezone.utc)
+    )
+    notify_receiver = models.Notification(
+        user_id=new_user.id,
+        watch_id=token_id,
+        title="Reloj recibido",
+        message=f"{current_user.username} te ha enviado {watch_name}.",
+        type="INFO",
+        created_at=datetime.now(timezone.utc)
+    )
+    db.add(notify_sender)
+    db.add(notify_receiver)
     db.commit()
 
     # 4. Notificamos por WebSocket para que las listas se refresquen solas
     if manager:
         await manager.broadcast("update_marketplace")
+        await manager.send_to_user(current_user.id, "update_users")
+        await manager.send_to_user(new_user.id, "update_users")
 
     return {"status": "success", "message": "Propiedad actualizada correctamente"}
 
