@@ -250,7 +250,9 @@ export default function WatchScreen({ route, navigation }) {
 
     // — PASOS 1-3: BLOCKCHAIN —
     try {
+      Alert.alert('DEBUG 1', 'Entrando en bloque blockchain');
       const signer = await getConnectedSigner();
+      Alert.alert('DEBUG 2', `Signer obtenido: ${await signer.getAddress()}`);
       const nftContract = new ethers.Contract(NFT_ADDRESS, WatchNFT_ABI.abi, signer);
       const marketplaceContract = new ethers.Contract(MARKETPLACE_ADDRESS, Marketplace_ABI.abi, signer);
       const usdcContract = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, signer);
