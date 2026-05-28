@@ -137,7 +137,7 @@ export default function WatchHistoryTab({
               const rows = [
                 { label: event.isMint ? 'Por' : 'De', wallet: event.fromWallet, user: event.fromUser, isEscrow: false },
                 event.viaWallet ? { label: 'Vía', wallet: event.viaWallet, user: null, isEscrow: true, isAuction: event.isAuction } : null,
-                { label: 'A', wallet: event.toWallet, user: event.toUser, isEscrow: false },
+                !event.isMint ? { label: 'A', wallet: event.toWallet, user: event.toUser, isEscrow: false } : null,
               ].filter(Boolean);
               return rows.map(({ label, wallet, user, isEscrow, isAuction: isAuc }) => wallet ? (
                 <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
