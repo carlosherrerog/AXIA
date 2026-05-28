@@ -434,6 +434,7 @@ export default function UserDashboardScreen({ route, navigation }) {
         <View style={{ paddingHorizontal: hPad, paddingTop: 16 }}>
           <UserInfo
             noMargin
+            forceExpanded
             loggedUser={loggedUser}
             showAlert={showAlert}
             onSettings={() => navigation.navigate('Configuracion')}
