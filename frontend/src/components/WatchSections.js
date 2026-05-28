@@ -68,7 +68,7 @@ export default function WatchSections({
   const listedNfts  = myNfts.filter(nft => nft.is_listed && !nft.is_buyer && !nft.is_auction);
 
   const tabs = [
-    { key: 'collection', label: isDealer ? 'Stock' : 'Mi Colección', count: myNfts.length },
+    { key: 'collection', label: isDealer ? 'Stock' : 'Mis relojes', count: myNfts.length },
     { key: 'listed',     label: 'En Venta',                          count: listedNfts.length },
     ...(isParticular ? [{ key: 'bids', label: 'Subastas', count: myBids?.length ?? 0 }] : []),
   ];
@@ -137,33 +137,14 @@ export default function WatchSections({
             )}
           </TouchableOpacity>
 
-          {walletAddress && !isMobile && (
+          {walletAddress && (
             <TouchableOpacity onPress={onOpenImportModal} style={globalStyles.importButton}>
-              <Ionicons name="add-circle" size={20} color={colors.primary} style={{ marginRight: 4 }} />
-              <Text style={globalStyles.importText}>Importar</Text>
+              <Ionicons name="add-circle" size={20} color={colors.primary} style={{ marginRight: isMobile ? 0 : 4 }} />
+              {!isMobile && <Text style={globalStyles.importText}>Importar</Text>}
             </TouchableOpacity>
           )}
         </View>
       </View>
-
-      {/* Botón importar en móvil — fila separada bajo las pestañas */}
-      {walletAddress && isMobile && (
-        <TouchableOpacity
-          onPress={onOpenImportModal}
-          style={{
-            flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end',
-            marginHorizontal: hPad, marginTop: 6, marginBottom: 2,
-            paddingHorizontal: 12, paddingVertical: 6,
-            borderRadius: 20, borderWidth: 1,
-            borderColor: colors.primary + '60',
-            backgroundColor: colors.primary + '15',
-            gap: 5,
-          }}
-        >
-          <Ionicons name="add-circle" size={16} color={colors.primary} />
-          <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13 }}>Importar</Text>
-        </TouchableOpacity>
-      )}
 
       {/* CONTENIDO DE LAS PESTAÑAS */}
       <View style={{ paddingHorizontal: hPad }}>
