@@ -2806,15 +2806,18 @@ async def transfer_nft(
     )
     db.add(notify_sender)
     db.add(notify_receiver)
-    db.commit()
 
-    # Espera a que el RPC indexe el evento Transfer antes de releer el historial
-    await asyncio.sleep(4)
-    _resync_ownership_history(token_id, db)
-    try:
-        db.commit()
-    except Exception:
-        db.rollback()
+    # Insertar entrada de historial directamente — no depende del tiempo de indexado de Polygonscan
+    history_entry = models.WatchOwnershipHistory(
+        token_id=token_id,
+        previous_owner_wallet=current_user.wallet_address or "",
+        new_owner_wallet=request.new_owner,
+        via_contract_wallet=None,
+        price_usdc=None,
+        transferred_at=datetime.now(timezone.utc),
+    )
+    db.add(history_entry)
+    db.commit()
 
     # 4. Notificamos por WebSocket para que las listas se refresquen solas
     if manager:
