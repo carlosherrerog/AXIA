@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/axia-icons/axia-icon-rounded-purple-1024.png",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/axia-icons/axia-icon-rounded-purple-1024.png",
       "resizeMode": "contain",
