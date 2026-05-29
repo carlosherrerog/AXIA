@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "AXIA",
-    "slug": "frontend",
+    "slug": "axia",
+    "scheme": "axia",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/axia-icons/axia-wordmark-purple-1024.png",
@@ -21,7 +22,15 @@
         "foregroundImage": "./assets/axia-icons/axia-wordmark-purple-1024.png",
         "backgroundColor": "#0d0d0d"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "axia" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/axia-icons/icono-AXIA.png",
@@ -34,6 +43,12 @@
     },
     "plugins": [
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "89e308bb-8bd3-4bee-9fc3-c7bcef1091f6"
+      }
+    },
+    "owner": "carlosherrerogarcias-organization"
   }
 }
