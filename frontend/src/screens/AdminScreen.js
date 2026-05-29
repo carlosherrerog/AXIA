@@ -1410,12 +1410,11 @@ export default function AdminScreen({ route, navigation }) {
   };
 
   const SECTIONS = [
-    { id: 'pending',     label: 'Solicitudes', icon: 'time-outline',       badge: stats.pending },
-    { id: 'funds',       label: 'Fondos',      icon: 'cash-outline',       badge: fundRequests.length || null },
-    { id: 'RELOJERO',    label: 'Relojeros',   icon: 'build-outline',      badge: stats.relojeros   || null },
-    { id: 'DEALER',      label: 'Dealers',     icon: 'storefront-outline', badge: stats.dealers     || null },
-    { id: 'FABRICANTE',  label: 'Fabricantes', icon: 'business-outline',   badge: stats.fabricantes || null },
-    { id: 'users',       label: 'Particulares', icon: 'people-outline',    badge: particulares.length || null },
+    { id: 'pending',    label: 'Solicitudes',  icon: 'time-outline',       badge: stats.pending },
+    { id: 'RELOJERO',   label: 'Relojeros',    icon: 'build-outline',      badge: stats.relojeros   || null },
+    { id: 'DEALER',     label: 'Dealers',      icon: 'storefront-outline', badge: stats.dealers     || null },
+    { id: 'FABRICANTE', label: 'Fabricantes',  icon: 'business-outline',   badge: stats.fabricantes || null },
+    { id: 'users',      label: 'Particulares', icon: 'people-outline',     badge: particulares.length || null },
   ];
 
   const renderContent = () => {
@@ -1437,23 +1436,6 @@ export default function AdminScreen({ route, navigation }) {
           onApprove={() => handleRoleAction(u.id, 'approve')}
           onReject={() => handleRoleAction(u.id, 'reject')} />;
       });
-    }
-
-    if (activeSection === 'funds') {
-      if (!fundRequests.length) return (
-        <EmptyState icon="cash-outline" title="Sin solicitudes de fondos"
-          subtitle="Aparecerán aquí cuando un usuario solicite fondos de prueba." color="#22c55e" colors={colors} />
-      );
-      return fundRequests.map(req => (
-        <FundRequestCard
-          key={req.id}
-          req={req}
-          processing={processingFund === req.id}
-          onApprove={() => handleFundAction(req.id, 'approve')}
-          onReject={() => handleFundAction(req.id, 'reject')}
-          colors={colors}
-        />
-      ));
     }
 
     if (['RELOJERO','DEALER','FABRICANTE'].includes(activeSection)) {
@@ -1710,6 +1692,48 @@ export default function AdminScreen({ route, navigation }) {
           {/* ── Contratos desplegados ── */}
           <ContractsPanel colors={colors} />
 
+          {/* ── Solicitudes de fondos de prueba ── */}
+          {fundRequests.length > 0 && (
+            <View style={{
+              backgroundColor: colors.backgroundAlt,
+              borderRadius: 14, borderWidth: 1, borderColor: '#22c55e40',
+              marginBottom: 16, overflow: 'hidden',
+            }}>
+              <View style={{ height: 2, backgroundColor: '#22c55e60' }} />
+              <View style={{ padding: 14 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <View style={{
+                    width: 28, height: 28, borderRadius: 8,
+                    backgroundColor: '#22c55e18', borderWidth: 1, borderColor: '#22c55e40',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Ionicons name="cash-outline" size={14} color="#22c55e" />
+                  </View>
+                  <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, flex: 1 }}>
+                    Fondos de prueba
+                  </Text>
+                  <View style={{
+                    backgroundColor: '#22c55e', borderRadius: 10,
+                    minWidth: 20, height: 20, paddingHorizontal: 6,
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{fundRequests.length}</Text>
+                  </View>
+                </View>
+                {fundRequests.map(req => (
+                  <FundRequestCard
+                    key={req.id}
+                    req={req}
+                    processing={processingFund === req.id}
+                    onApprove={() => handleFundAction(req.id, 'approve')}
+                    onReject={() => handleFundAction(req.id, 'reject')}
+                    colors={colors}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
+
           {/* Tabs */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
             style={{ marginBottom: 14 }}
@@ -1757,7 +1781,6 @@ export default function AdminScreen({ route, navigation }) {
               }} />
               <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>
                 {activeSection === 'pending' && `${allPending.length} solicitud${allPending.length !== 1 ? 'es' : ''} pendiente${allPending.length !== 1 ? 's' : ''}`}
-                {activeSection === 'funds' && `${fundRequests.length} solicitud${fundRequests.length !== 1 ? 'es' : ''} de fondos pendiente${fundRequests.length !== 1 ? 's' : ''}`}
                 {['RELOJERO','DEALER','FABRICANTE'].includes(activeSection) && `${users.filter(u => u.roles?.includes(activeSection)).length} ${ROLE_META[activeSection].label.toLowerCase()} activos`}
                 {activeSection === 'users' && `${particulares.length} particular${particulares.length !== 1 ? 'es' : ''}`}
 
