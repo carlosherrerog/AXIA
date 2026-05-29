@@ -29,6 +29,11 @@ if (Platform.OS === 'web') {
     const ak = require('@reown/appkit-react-native');
     useWeb3Modal = ak.useAppKit;
     useDisconnect = ak.useDisconnect;
+    useWeb3ModalProvider = () => {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      const { walletProvider } = ak.useAppKitProvider('eip155');
+      return { walletProvider };
+    };
   } catch {}
 }
 
@@ -197,9 +202,10 @@ export default function GlobalHeader({
 
   const proceedConnect = async () => {
     setWalletInfoVisible(false);
-    if (window.ethereum) {
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-      await doVerify(window.ethereum);
+    const winEth = typeof window !== 'undefined' ? window?.ethereum : null;
+    if (winEth) {
+      await winEth.request({ method: 'eth_requestAccounts' });
+      await doVerify(winEth);
     } else if (w3mProvider) {
       await doVerify(w3mProvider);
     } else if (w3mOpen) {
@@ -209,8 +215,6 @@ export default function GlobalHeader({
   };
 
   const handleConnect = async () => {
-    if (Platform.OS !== 'web') return;
-    // Mostrar siempre el aviso de los 2 pasos antes de continuar
     setWalletInfoVisible(true);
   };
 
