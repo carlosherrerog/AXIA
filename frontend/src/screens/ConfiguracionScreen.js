@@ -148,6 +148,7 @@ export default function ConfiguracionScreen({ navigation }) {
 
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [passModal, setPassModal]         = useState(false);
+  const [requestingFunds, setRequestingFunds] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -230,6 +231,24 @@ export default function ConfiguracionScreen({ navigation }) {
     } catch (e) {
       showAlert('Error', e.response?.data?.detail || 'No se pudo eliminar la cuenta. Inténtalo más tarde.', 'error');
       setDeletingAccount(false);
+    }
+  };
+
+  // ── Fondos de prueba ────────────────────────────────────────────────────
+
+  const handleRequestFunds = async () => {
+    try {
+      setRequestingFunds(true);
+      await api.post('/fund-requests');
+      showAlert(
+        'Solicitud enviada',
+        'El administrador ha recibido tu solicitud. Recibirás una notificación cuando sea aprobada.',
+        'success',
+      );
+    } catch (e) {
+      showAlert('Error', e.response?.data?.detail || 'No se pudo enviar la solicitud.', 'error');
+    } finally {
+      setRequestingFunds(false);
     }
   };
 
@@ -400,6 +419,43 @@ export default function ConfiguracionScreen({ navigation }) {
             </>
           )}
         </SectionCard>
+
+        {/* ── Fondos de prueba ── */}
+        {hasWallet && (
+          <SectionCard title="Fondos de prueba" icon="cash-outline" color="#22c55e">
+            <View style={{
+              flexDirection: 'row', gap: 10, alignItems: 'flex-start',
+              backgroundColor: '#22c55e10', borderRadius: 12,
+              borderWidth: 1, borderColor: '#22c55e30',
+              padding: 14, marginBottom: 14,
+            }}>
+              <Ionicons name="information-circle-outline" size={17} color="#22c55e" style={{ marginTop: 1 }} />
+              <Text style={{ color: colors.textSecondary, fontSize: 13, flex: 1, lineHeight: 19 }}>
+                Solicita <Text style={{ color: colors.text, fontWeight: '700' }}>1 POL</Text> y{' '}
+                <Text style={{ color: colors.text, fontWeight: '700' }}>1.000 USDC</Text> de prueba para
+                explorar el marketplace. El administrador aprobará la transferencia manualmente.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={handleRequestFunds}
+              disabled={requestingFunds}
+              style={{
+                backgroundColor: '#22c55e',
+                borderRadius: 12, paddingVertical: 13,
+                alignItems: 'center', opacity: requestingFunds ? 0.7 : 1,
+                flexDirection: 'row', justifyContent: 'center', gap: 8,
+              }}
+            >
+              {requestingFunds
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <>
+                    <Ionicons name="send-outline" size={16} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Solicitar fondos de prueba</Text>
+                  </>
+              }
+            </TouchableOpacity>
+          </SectionCard>
+        )}
 
         {/* ── Rol profesional (solo si hay roles disponibles) ── */}
         {availableRoles.length > 0 && (
