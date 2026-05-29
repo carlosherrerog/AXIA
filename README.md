@@ -29,11 +29,11 @@ El proyecto es un monorepo con tres servicios independientes desplegables:
 
 | Contrato | Dirección | Función |
 |---|---|---|
-| WatchNFT | `0x48F996eb99127A5858fb88670C0F670403B2a03D` | ERC-721 — gemelos digitales, integración NFC |
-| WatchMarketplace | `0xAac2855fDc5fA3A3d81fEe442662E44f98985574` | Listados, escrow, compraventas P2P y Dealer |
-| WatchAuction | `0x3D3A0338BD632bFE6FF3F2f60AB54ee9fcFeE97a` | Subastas con precio mínimo y puja inglesa |
-| WatchSignature | `0x867646fC1f7F7Eb24bEfdfdBE8130453226283ca` | Verificación de firmas EIP-712 |
-| MockUSDC | `0xBF3B419496a24f94b0F4DD83bbccA501Bd9F8620` | Stablecoin de prueba (6 decimales, ERC-20) |
+| WatchNFT | `0x00623aeAaE1Dc90A34754893db84145fECfCF539` | ERC-721 — gemelos digitales, integración NFC |
+| WatchMarketplace | `0x1eaea56137Dd520e77aE34851F9b13BC6658ADf4` | Listados, escrow, compraventas P2P y Dealer |
+| WatchAuction | `0x4DaB374d75a890bB0311C05063a9EfB4ce95229e` | Subastas con precio mínimo y puja inglesa |
+| WatchSignature | `0x92bc5ba3D4763a0129a1Dadacc1cf4b5Fb7b4837` | Verificación de firmas EIP-712 |
+| MockUSDC | `0x7BE858258f6aF7D21016e90E1D011F3D8705A634` | Stablecoin de prueba (6 decimales, ERC-20) |
 
 Verificables en [Amoy Polygonscan](https://amoy.polygonscan.com).
 
@@ -42,10 +42,10 @@ Verificables en [Amoy Polygonscan](https://amoy.polygonscan.com).
 | Contrato | Dirección |
 |---|---|
 | WatchNFT | `0x8725a60F432EDCaA3dF1d7987e99B9C18c465988` |
-| WatchMarketplace | `0x867646fC1f7F7Eb24bEfdfdBE8130453226283ca` |
-| WatchAuction | `0xAac2855fDc5fA3A3d81fEe442662E44f98985574` |
-| WatchSignature | `0xBF3B419496a24f94b0F4DD83bbccA501Bd9F8620` |
-| MockUSDC | `0x48F996eb99127A5858fb88670C0F670403B2a03D` |
+| WatchMarketplace | `0x92bc5ba3D4763a0129a1Dadacc1cf4b5Fb7b4837` |
+| WatchAuction | `0x1eaea56137Dd520e77aE34851F9b13BC6658ADf4` |
+| WatchSignature | `0x7BE858258f6aF7D21016e90E1D011F3D8705A634` |
+| MockUSDC | `0x00623aeAaE1Dc90A34754893db84145fECfCF539` |
 
 Verificables en [Polygonscan](https://polygonscan.com).
 
