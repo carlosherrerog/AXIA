@@ -38,3 +38,4 @@ CLAUDE.md
 # Misc
 .DS_Store
 *.log
+.vercel
