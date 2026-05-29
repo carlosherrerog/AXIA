@@ -1090,29 +1090,29 @@ class LoginFrame(tk.Frame):
 
         if "axia_logo" in ICONS:
             tk.Label(center, image=ICONS["axia_logo"],
-                     bg=C["bg"]).pack(pady=(0, 4))
+                     bg=C["bg"]).pack(pady=(0, 10))
         else:
             tk.Label(center, text="AXIA", font=(_SANS, 30, "bold"),
-                     fg=C["primary"], bg=C["bg"]).pack(pady=(0, 4))
+                     fg=C["primary"], bg=C["bg"]).pack(pady=(0, 10))
         tk.Label(center, text="Manufacturer Tool",
-                 font=(_SANS, 12), fg=C["text2"], bg=C["bg"]).pack(pady=(0, 28))
+                 font=(_SANS, 12), fg=C["text2"], bg=C["bg"]).pack(pady=(0, 40))
 
         card = styled_frame(center, C["bg_alt"])
         card.configure(highlightthickness=1, highlightbackground=C["border"])
-        card.pack(ipadx=32, ipady=24)
+        card.pack(ipadx=44, ipady=32)
 
         styled_label(card, "Iniciar sesión", font=FONT_HEAD,
-                     bg=C["bg_alt"]).pack(pady=(0, 18))
+                     bg=C["bg_alt"]).pack(pady=(0, 26))
 
         styled_label(card, "Usuario o correo", font=FONT_SMALL,
                      fg=C["text2"], bg=C["bg_alt"]).pack(anchor="w")
         self.id_var = tk.StringVar()
-        styled_entry(card, self.id_var, 34).pack(pady=(2, 10))
+        styled_entry(card, self.id_var, 34).pack(pady=(4, 16))
 
         styled_label(card, "Contraseña", font=FONT_SMALL,
                      fg=C["text2"], bg=C["bg_alt"]).pack(anchor="w")
         self.pw_var = tk.StringVar()
-        styled_entry(card, self.pw_var, 34, show="•").pack(pady=(2, 4))
+        styled_entry(card, self.pw_var, 34, show="•").pack(pady=(4, 8))
 
         self.status_label = tk.Label(card, text="", font=FONT_SMALL,
                                      fg=C["text2"], bg=C["bg_alt"])
@@ -1120,13 +1120,13 @@ class LoginFrame(tk.Frame):
 
         self.err_label = tk.Label(card, text="", font=FONT_SMALL,
                                   fg=C["error"], bg=C["bg_alt"])
-        self.err_label.pack(pady=(0, 8))
+        self.err_label.pack(pady=(0, 12))
 
         self.btn = styled_button(card, "Entrar", self._login, width=20)
-        self.btn.pack(pady=(0, 4))
+        self.btn.pack(pady=(0, 8))
 
         tk.Label(card, text="Solo usuarios con rol FABRICANTE pueden acceder.",
-                 font=FONT_SMALL, fg=C["muted"], bg=C["bg_alt"]).pack(pady=(8, 0))
+                 font=FONT_SMALL, fg=C["muted"], bg=C["bg_alt"]).pack(pady=(14, 0))
 
         card.bind_all("<Return>", lambda e: self._login())
 
