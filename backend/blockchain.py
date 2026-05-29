@@ -55,7 +55,11 @@ def load_abi(filename: str):
 
 watch_nft_abi = load_abi('WatchNFT.json')
 marketplace_abi = load_abi('WatchMarketplace.json')
-mock_usdc_abi = load_abi('MockUSDC.json')
+
+try:
+    mock_usdc_abi = load_abi('MockUSDC.json')
+except Exception:
+    mock_usdc_abi = []
 
 try:
     auction_abi = load_abi('WatchAuction.json')
@@ -109,8 +113,11 @@ if WATCH_NFT_ADDRESS:
 if MARKETPLACE_ADDRESS:
     marketplace_contract = w3.eth.contract(address=w3.to_checksum_address(MARKETPLACE_ADDRESS), abi=marketplace_abi)
     marketplace_contract_public = w3_public.eth.contract(address=w3_public.to_checksum_address(MARKETPLACE_ADDRESS), abi=marketplace_abi)
-if MOCK_USDC_ADDRESS:
-    mock_usdc_contract = w3.eth.contract(address=w3.to_checksum_address(MOCK_USDC_ADDRESS), abi=mock_usdc_abi)
+if MOCK_USDC_ADDRESS and mock_usdc_abi:
+    try:
+        mock_usdc_contract = w3.eth.contract(address=w3.to_checksum_address(MOCK_USDC_ADDRESS), abi=mock_usdc_abi)
+    except Exception as e:
+        print(f"[blockchain] Error instanciando MockUSDC contract: {e}")
 if WATCH_AUCTION_ADDRESS and auction_abi:
     auction_contract = w3.eth.contract(address=w3.to_checksum_address(WATCH_AUCTION_ADDRESS), abi=auction_abi)
 
