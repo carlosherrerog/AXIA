@@ -53,7 +53,7 @@ export default function WatchHistoryTab({
                 : isAuctionReturn ? 'close-circle-outline'
                 : isAuction ? 'hammer-outline'
                 : isP2PSale ? 'shield-checkmark-outline'
-                : isDealerSale ? 'storefront-outline'
+                : isDealerSale ? 'cash-outline'
                 : 'swap-horizontal';
     const color = isMint ? '#a855f7'
                 : isAuctionReturn ? '#6b7280'
@@ -65,7 +65,7 @@ export default function WatchHistoryTab({
                 : isAuctionReturn ? 'Subasta desierta'
                 : isAuction ? 'Vendido en subasta'
                 : isP2PSale ? 'Venta P2P'
-                : isDealerSale ? 'Venta Dealer / Fabricante'
+                : isDealerSale ? 'Venta'
                 : 'Transferencia de propiedad';
     return {
       _type: 'transfer',
