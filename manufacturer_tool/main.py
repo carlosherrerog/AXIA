@@ -26,7 +26,11 @@ else:
     BUNDLE_DIR = BASE_DIR
 
 ABI_DIR = BUNDLE_DIR / "abi"
-ENV_FILE = BASE_DIR / ".env"
+
+# Configuración de usuario en carpeta del sistema (no junto al ejecutable)
+CONFIG_DIR = Path.home() / ".axia"
+CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+ENV_FILE = CONFIG_DIR / "config.env"
 
 load_dotenv(ENV_FILE)
 
@@ -146,15 +150,8 @@ DEFAULTS = {
 }
 
 ENV_TEMPLATE = """\
-# AXIA Manufacturer Tool — Configuración
-# Rellena PRIVATE_KEY, PINATA_API_KEY y PINATA_SECRET_KEY.
-# El resto de valores ya están preconfigurados para Polygon Amoy.
-
-API_URL={API_URL}
-RPC_URL={RPC_URL}
-WATCH_NFT_ADDRESS={WATCH_NFT_ADDRESS}
-MARKETPLACE_ADDRESS={MARKETPLACE_ADDRESS}
-USDC_ADDRESS={USDC_ADDRESS}
+# AXIA Manufacturer Tool — Credenciales de usuario
+# Generado automáticamente. No compartas este archivo.
 
 # Tu clave privada (nunca la compartas)
 PRIVATE_KEY=
@@ -165,9 +162,9 @@ PINATA_SECRET_KEY=
 """
 
 def _bootstrap_env():
-    """Crea un .env pre-configurado en el primer arranque si no existe."""
+    """Crea el archivo de config en primer arranque si no existe."""
     if not ENV_FILE.exists():
-        ENV_FILE.write_text(ENV_TEMPLATE.format(**DEFAULTS), encoding="utf-8")
+        ENV_FILE.write_text(ENV_TEMPLATE, encoding="utf-8")
         load_dotenv(ENV_FILE)
 
 _bootstrap_env()
@@ -1207,9 +1204,10 @@ class LoginFrame(tk.Frame):
 # PANTALLA PRINCIPAL
 # ─────────────────────────────────────────────────────────────────────────────
 class MainFrame(tk.Frame):
-    def __init__(self, parent, on_logout):
+    def __init__(self, parent, on_logout, initial_tab=None):
         super().__init__(parent, bg=C["bg"])
         self.on_logout    = on_logout
+        self._initial_tab = initial_tab
         self._current_tab = None
         self._build()
 
@@ -1304,7 +1302,8 @@ class MainFrame(tk.Frame):
             "stock":    StockTab(self.content),
             "settings": SettingsTab(self.content),
         }
-        self.show_tab("mint")
+        tab_keys = {"Configuración": "settings", "Mi Stock": "stock", "Mintear Reloj": "mint"}
+        self.show_tab(tab_keys.get(self._initial_tab, "mint"))
 
     # ── Tabs ──────────────────────────────────────────────────────────────
     def show_tab(self, key):
@@ -1905,7 +1904,7 @@ class SettingsTab(tk.Frame):
                  font=FONT_SMALL, fg=C["muted"], bg=C["surface"],
                  wraplength=600, justify="left").pack(anchor="w", pady=(6, 0))
 
-        # Grupos de configuración
+        # Grupos de configuración — solo claves del usuario
         groups = [
             ("Credenciales", [
                 ("PRIVATE_KEY",       "Clave privada",      "0xTuClavePrivada",    True),
@@ -1913,13 +1912,6 @@ class SettingsTab(tk.Frame):
             ("Pinata IPFS", [
                 ("PINATA_API_KEY",    "API Key",            "",                    False),
                 ("PINATA_SECRET_KEY", "Secret Key",         "",                    True),
-            ]),
-            ("Red y contratos (opcional)", [
-                ("API_URL",             "URL del backend",   DEFAULTS["API_URL"],   False),
-                ("RPC_URL",             "RPC URL",           DEFAULTS["RPC_URL"],   False),
-                ("WATCH_NFT_ADDRESS",   "Dirección WatchNFT",DEFAULTS["WATCH_NFT_ADDRESS"], False),
-                ("MARKETPLACE_ADDRESS", "Marketplace",       DEFAULTS["MARKETPLACE_ADDRESS"], False),
-                ("USDC_ADDRESS",        "MockUSDC / USDC",   DEFAULTS["USDC_ADDRESS"], False),
             ]),
         ]
 
@@ -1992,15 +1984,22 @@ class AxiaMfgApp(tk.Tk):
 
         _load_icons()
         self._current_frame = None
-        self.show_login()
+        # Primer arranque: si no hay credenciales configuradas, ir directo a configuración
+        if not get_cfg("PRIVATE_KEY") or not get_cfg("PINATA_API_KEY"):
+            self.show_login(force_config=True)
+        else:
+            self.show_login()
 
-    def show_login(self):
+    def show_login(self, force_config=False):
+        self._force_config = force_config
         self._clear()
         self._current_frame = LoginFrame(self, self.show_main)
 
     def show_main(self):
         self._clear()
-        self._current_frame = MainFrame(self, self.show_login)
+        self._current_frame = MainFrame(self, self.show_login,
+                                        initial_tab="Configuración" if getattr(self, "_force_config", False) else None)
+        self._force_config = False
 
     def _clear(self):
         for w in self.winfo_children():
