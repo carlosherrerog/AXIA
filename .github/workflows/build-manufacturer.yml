@@ -1,0 +1,90 @@
+name: Build Manufacturer Tool
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'manufacturer_tool/**'
+    branches:
+      - main
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: AXIA-Manufacturer-linux
+            exe: dist/AXIA-Manufacturer
+          - os: windows-latest
+            artifact: AXIA-Manufacturer-windows
+            exe: dist/AXIA-Manufacturer.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system deps (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y libpcsclite-dev
+
+      - name: Install Python dependencies
+        working-directory: manufacturer_tool
+        run: pip install -r requirements.txt
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        working-directory: manufacturer_tool
+        run: |
+          pyinstaller \
+            --onefile \
+            --windowed \
+            --name "AXIA-Manufacturer" \
+            --add-data "abi:abi" \
+            --add-data "icons:icons" \
+            --hidden-import "web3" \
+            --hidden-import "web3.middleware" \
+            --hidden-import "web3.providers" \
+            --hidden-import "smartcard" \
+            --hidden-import "smartcard.System" \
+            --hidden-import "smartcard.util" \
+            --hidden-import "PIL" \
+            --hidden-import "PIL.Image" \
+            --hidden-import "PIL.ImageTk" \
+            --clean \
+            main.py
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        working-directory: manufacturer_tool
+        run: |
+          pyinstaller `
+            --onefile `
+            --windowed `
+            --name "AXIA-Manufacturer" `
+            --add-data "abi;abi" `
+            --add-data "icons;icons" `
+            --hidden-import "web3" `
+            --hidden-import "web3.middleware" `
+            --hidden-import "web3.providers" `
+            --hidden-import "smartcard" `
+            --hidden-import "smartcard.System" `
+            --hidden-import "smartcard.util" `
+            --hidden-import "PIL" `
+            --hidden-import "PIL.Image" `
+            --hidden-import "PIL.ImageTk" `
+            --clean `
+            main.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: manufacturer_tool/${{ matrix.exe }}
+          retention-days: 30
