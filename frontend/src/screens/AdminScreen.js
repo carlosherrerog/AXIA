@@ -1068,6 +1068,98 @@ function ContractsPanel({ colors }) {
   );
 }
 
+function FundRequestCard({ req, processing, onApprove, onReject, colors }) {
+  const initials = (req.full_name || req.username || '?')
+    .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  return (
+    <View style={{
+      backgroundColor: colors.backgroundAlt,
+      borderRadius: 14, borderWidth: 1, borderColor: colors.border,
+      padding: 16, marginBottom: 10,
+    }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+        <View style={{
+          width: 40, height: 40, borderRadius: 20,
+          backgroundColor: '#22c55e12', borderWidth: 1.5, borderColor: '#22c55e30',
+          justifyContent: 'center', alignItems: 'center',
+        }}>
+          <Text style={{ color: '#22c55e', fontWeight: '800', fontSize: 14 }}>{initials}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>
+            {req.full_name || req.username}
+          </Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 12 }}>@{req.username}</Text>
+        </View>
+        <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+          {new Date(req.created_at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}
+        </Text>
+      </View>
+
+      <View style={{
+        flexDirection: 'row', gap: 8,
+        backgroundColor: colors.surface, borderRadius: 10,
+        borderWidth: 1, borderColor: colors.border,
+        padding: 10, marginBottom: 14,
+      }}>
+        <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 9, fontWeight: '700', letterSpacing: 0.8 }}>POL</Text>
+          <Text style={{ color: '#4ade80', fontSize: 18, fontWeight: '800' }}>{req.pol_amount}</Text>
+        </View>
+        <View style={{ width: 1, backgroundColor: colors.border }} />
+        <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 9, fontWeight: '700', letterSpacing: 0.8 }}>USDC</Text>
+          <Text style={{ color: '#22c55e', fontSize: 18, fontWeight: '800' }}>{req.usdc_amount.toLocaleString()}</Text>
+        </View>
+      </View>
+
+      <View style={{
+        backgroundColor: '#8b5cf608', borderRadius: 8,
+        paddingHorizontal: 10, paddingVertical: 6,
+        borderWidth: 1, borderColor: '#8b5cf618',
+        marginBottom: 12,
+      }}>
+        <Text style={{
+          color: colors.textMuted, fontSize: 10,
+          fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+        }} numberOfLines={1}>{req.wallet_address}</Text>
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <TouchableOpacity
+          onPress={onReject}
+          disabled={processing}
+          style={{
+            flex: 1, paddingVertical: 10, borderRadius: 10,
+            backgroundColor: '#ef444412', borderWidth: 1, borderColor: '#ef444430',
+            alignItems: 'center', opacity: processing ? 0.5 : 1,
+          }}
+        >
+          <Text style={{ color: '#ef4444', fontWeight: '700', fontSize: 13 }}>Rechazar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onApprove}
+          disabled={processing}
+          style={{
+            flex: 2, paddingVertical: 10, borderRadius: 10,
+            backgroundColor: '#22c55e', alignItems: 'center',
+            opacity: processing ? 0.6 : 1,
+            flexDirection: 'row', justifyContent: 'center', gap: 6,
+          }}
+        >
+          {processing
+            ? <ActivityIndicator color="#fff" size="small" />
+            : <>
+                <Ionicons name="send-outline" size={14} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Enviar fondos</Text>
+              </>
+          }
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 export default function AdminScreen({ route, navigation }) {
   const { ethProvider } = useEthProvider();
   const { colors } = useTheme();
@@ -1096,6 +1188,8 @@ export default function AdminScreen({ route, navigation }) {
   const [usdcBalance,      setUsdcBalance]      = useState(null);
   const [polBalance,       setPolBalance]       = useState(null);
   const [walletCopied,     setWalletCopied]     = useState(false);
+  const [fundRequests,     setFundRequests]     = useState([]);
+  const [processingFund,   setProcessingFund]   = useState(null);
 
   const fmt = (v, dec = 2) =>
     Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: dec });
@@ -1132,16 +1226,18 @@ export default function AdminScreen({ route, navigation }) {
   const fetchAll = useCallback(async (initial = false) => {
     try {
       if (initial) setLoadingUsers(true);
-      const [resMe, resUsers, resLogistics, resMarket] = await Promise.all([
+      const [resMe, resUsers, resLogistics, resMarket, resFunds] = await Promise.all([
         api.get('/users/me'),
         api.get('/admin/users'),
         api.get('/admin/logistics-status').catch(() => ({ data: null })),
         api.get('/admin/marketplace-status').catch(() => ({ data: null })),
+        api.get('/admin/fund-requests').catch(() => ({ data: [] })),
       ]);
       setLoggedUser(resMe.data);
       setUsers(resUsers.data);
       setLogisticsStatus(resLogistics.data);
       if (resMarket.data) setMarketPaused(resMarket.data.paused);
+      setFundRequests(resFunds.data || []);
     } catch (e) {
       console.error('Admin fetch error:', e);
     } finally {
@@ -1159,6 +1255,7 @@ export default function AdminScreen({ route, navigation }) {
       if (
         type === 'update_users' ||
         type === 'new_user_registered' ||
+        type === 'new_fund_request' ||
         String(data).startsWith('new_role_request') ||
         type === 'marketplace_paused' ||
         type === 'marketplace_resumed'
@@ -1186,6 +1283,26 @@ export default function AdminScreen({ route, navigation }) {
       if (loggedUser?.wallet_address) fetchWalletBalances(loggedUser.wallet_address);
     } catch (e) {
       showAlert('Error', e.response?.data?.detail || 'No se pudo procesar la acción.', 'error');
+    }
+  };
+
+  const handleFundAction = async (requestId, action) => {
+    setProcessingFund(requestId);
+    try {
+      await api.post(`/admin/fund-requests/${requestId}/${action}`);
+      showAlert(
+        action === 'approve' ? 'Fondos enviados' : 'Solicitud rechazada',
+        action === 'approve'
+          ? 'Se han transferido 1 POL y 1.000 USDC al usuario.'
+          : 'La solicitud de fondos ha sido rechazada.',
+        action === 'approve' ? 'success' : 'info',
+      );
+      fetchAll(false);
+      if (loggedUser?.wallet_address) fetchWalletBalances(loggedUser.wallet_address);
+    } catch (e) {
+      showAlert('Error', e.response?.data?.detail || 'No se pudo procesar la acción.', 'error');
+    } finally {
+      setProcessingFund(null);
     }
   };
 
@@ -1294,6 +1411,7 @@ export default function AdminScreen({ route, navigation }) {
 
   const SECTIONS = [
     { id: 'pending',     label: 'Solicitudes', icon: 'time-outline',       badge: stats.pending },
+    { id: 'funds',       label: 'Fondos',      icon: 'cash-outline',       badge: fundRequests.length || null },
     { id: 'RELOJERO',    label: 'Relojeros',   icon: 'build-outline',      badge: stats.relojeros   || null },
     { id: 'DEALER',      label: 'Dealers',     icon: 'storefront-outline', badge: stats.dealers     || null },
     { id: 'FABRICANTE',  label: 'Fabricantes', icon: 'business-outline',   badge: stats.fabricantes || null },
@@ -1319,6 +1437,23 @@ export default function AdminScreen({ route, navigation }) {
           onApprove={() => handleRoleAction(u.id, 'approve')}
           onReject={() => handleRoleAction(u.id, 'reject')} />;
       });
+    }
+
+    if (activeSection === 'funds') {
+      if (!fundRequests.length) return (
+        <EmptyState icon="cash-outline" title="Sin solicitudes de fondos"
+          subtitle="Aparecerán aquí cuando un usuario solicite fondos de prueba." color="#22c55e" colors={colors} />
+      );
+      return fundRequests.map(req => (
+        <FundRequestCard
+          key={req.id}
+          req={req}
+          processing={processingFund === req.id}
+          onApprove={() => handleFundAction(req.id, 'approve')}
+          onReject={() => handleFundAction(req.id, 'reject')}
+          colors={colors}
+        />
+      ));
     }
 
     if (['RELOJERO','DEALER','FABRICANTE'].includes(activeSection)) {
@@ -1622,6 +1757,7 @@ export default function AdminScreen({ route, navigation }) {
               }} />
               <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>
                 {activeSection === 'pending' && `${allPending.length} solicitud${allPending.length !== 1 ? 'es' : ''} pendiente${allPending.length !== 1 ? 's' : ''}`}
+                {activeSection === 'funds' && `${fundRequests.length} solicitud${fundRequests.length !== 1 ? 'es' : ''} de fondos pendiente${fundRequests.length !== 1 ? 's' : ''}`}
                 {['RELOJERO','DEALER','FABRICANTE'].includes(activeSection) && `${users.filter(u => u.roles?.includes(activeSection)).length} ${ROLE_META[activeSection].label.toLowerCase()} activos`}
                 {activeSection === 'users' && `${particulares.length} particular${particulares.length !== 1 ? 'es' : ''}`}
 

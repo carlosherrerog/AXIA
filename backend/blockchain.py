@@ -15,6 +15,7 @@ RPC_URL = os.getenv("RPC_URL", "https://polygon-amoy.g.alchemy.com/v2/3tDtSIFSyE
 WATCH_NFT_ADDRESS     = os.getenv("WATCH_NFT_ADDRESS",     "0xbBfCa1b8404Dc43238C4A359E8454632f00c292F")
 MARKETPLACE_ADDRESS   = os.getenv("MARKETPLACE_ADDRESS",   "0xe7Be5Fd0162f7f2fbC5851FB9DC2f5b4b81F63d6")
 WATCH_AUCTION_ADDRESS = os.getenv("WATCH_AUCTION_ADDRESS", "0x701EAa91aeB8588694B116C004D1EaAC7f55F2F2")
+MOCK_USDC_ADDRESS     = os.getenv("MOCK_USDC_ADDRESS",     "0x967187957d31d0912aE57cad1B51F764339AaEe6")
 
 # CLAVES PRIVADAS
 ADMIN_PRIVATE_KEY = os.getenv("PRIVATE_KEY")
@@ -54,6 +55,7 @@ def load_abi(filename: str):
 
 watch_nft_abi = load_abi('WatchNFT.json')
 marketplace_abi = load_abi('WatchMarketplace.json')
+mock_usdc_abi = load_abi('MockUSDC.json')
 
 try:
     auction_abi = load_abi('WatchAuction.json')
@@ -64,6 +66,7 @@ except FileNotFoundError:
 watchNFT_contract = None
 marketplace_contract = None
 auction_contract = None
+mock_usdc_contract = None
 
 # Contratos espejo con RPC público — usados solo para get_logs
 watchNFT_contract_public = None
@@ -106,6 +109,8 @@ if WATCH_NFT_ADDRESS:
 if MARKETPLACE_ADDRESS:
     marketplace_contract = w3.eth.contract(address=w3.to_checksum_address(MARKETPLACE_ADDRESS), abi=marketplace_abi)
     marketplace_contract_public = w3_public.eth.contract(address=w3_public.to_checksum_address(MARKETPLACE_ADDRESS), abi=marketplace_abi)
+if MOCK_USDC_ADDRESS:
+    mock_usdc_contract = w3.eth.contract(address=w3.to_checksum_address(MOCK_USDC_ADDRESS), abi=mock_usdc_abi)
 if WATCH_AUCTION_ADDRESS and auction_abi:
     auction_contract = w3.eth.contract(address=w3.to_checksum_address(WATCH_AUCTION_ADDRESS), abi=auction_abi)
 
@@ -717,5 +722,46 @@ def assign_watchmaker(token_id: int, watchmaker_address: str):
         raise ValueError(f"Error de lógica del contrato al asignar relojero: {str(e)}")
     except Exception as e:
         raise ValueError(f"Error procesando transacción logística de asignación: {str(e)}")
-        raise ValueError(f"Error procesando transacción logística: {str(e)}")
+
+
+def send_test_funds(to_address: str, pol_amount: float = 1.0, usdc_amount: float = 1000.0):
+    """Envía POL nativo + MockUSDC desde la wallet del admin al usuario solicitante."""
+    if not ADMIN_PRIVATE_KEY or not ADMIN_ADDRESS:
+        raise ValueError("ADMIN_PRIVATE_KEY / ADMIN_ADDRESS no configurados.")
+    if not mock_usdc_contract:
+        raise ValueError("MOCK_USDC_ADDRESS no configurado.")
+
+    to = w3.to_checksum_address(to_address)
+    admin = w3.to_checksum_address(ADMIN_ADDRESS)
+    chain_id = w3.eth.chain_id
+
+    # 1. Enviar POL (gas nativo)
+    nonce = w3.eth.get_transaction_count(admin)
+    tx_pol = {
+        'to': to,
+        'value': w3.to_wei(pol_amount, 'ether'),
+        'gas': 21000,
+        'gasPrice': w3.eth.gas_price,
+        'nonce': nonce,
+        'chainId': chain_id,
+    }
+    signed_pol = w3.eth.account.sign_transaction(tx_pol, private_key=ADMIN_PRIVATE_KEY)
+    hash_pol = w3.eth.send_raw_transaction(signed_pol.raw_transaction)
+    w3.eth.wait_for_transaction_receipt(hash_pol, timeout=120)
+
+    # 2. Enviar MockUSDC (ERC-20, 6 decimales)
+    nonce2 = w3.eth.get_transaction_count(admin)
+    usdc_wei = int(usdc_amount * 10 ** 6)
+    tx_usdc = mock_usdc_contract.functions.transfer(to, usdc_wei).build_transaction({
+        'from': admin,
+        'nonce': nonce2,
+        'gas': 100000,
+        'gasPrice': w3.eth.gas_price,
+        'chainId': chain_id,
+    })
+    signed_usdc = w3.eth.account.sign_transaction(tx_usdc, private_key=ADMIN_PRIVATE_KEY)
+    hash_usdc = w3.eth.send_raw_transaction(signed_usdc.raw_transaction)
+    w3.eth.wait_for_transaction_receipt(hash_usdc, timeout=120)
+
+    return hash_pol.hex(), hash_usdc.hex()
     

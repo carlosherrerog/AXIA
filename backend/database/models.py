@@ -178,3 +178,20 @@ class Notification(Base):
     # RELACIONES
     user: Mapped["User"] = relationship(back_populates="notifications")
     watch: Mapped[Optional["Watch"]] = relationship(back_populates="notifications")
+
+
+class FundRequest(Base):
+    __tablename__ = "fund_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    wallet_address: Mapped[str] = mapped_column(String(42))
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending/approved/rejected
+    pol_amount: Mapped[float] = mapped_column(Float, default=1.0)
+    usdc_amount: Mapped[float] = mapped_column(Float, default=1000.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    tx_hash_pol: Mapped[Optional[str]] = mapped_column(String(66), nullable=True)
+    tx_hash_usdc: Mapped[Optional[str]] = mapped_column(String(66), nullable=True)
+
+    user: Mapped["User"] = relationship("User")

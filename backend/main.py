@@ -1626,6 +1626,126 @@ async def set_auction_contract(body: AddressRequest, current_user: models.User =
         raise HTTPException(status_code=500, detail=f"Error actualizando contrato de subastas: {e}")
 
 # ===============================================================================
+#  SOLICITUD DE FONDOS DE PRUEBA
+# ===============================================================================
+
+@app.post("/fund-requests")
+async def request_test_funds(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(database.get_db),
+):
+    if not current_user.wallet_address:
+        raise HTTPException(status_code=400, detail="Necesitas vincular una wallet antes de solicitar fondos.")
+
+    fund_req = models.FundRequest(
+        user_id=current_user.id,
+        wallet_address=current_user.wallet_address,
+        status="pending",
+        pol_amount=1.0,
+        usdc_amount=1000.0,
+    )
+    db.add(fund_req)
+    db.commit()
+    db.refresh(fund_req)
+
+    await manager.broadcast("new_fund_request")
+    return {"id": fund_req.id, "status": "pending"}
+
+
+@app.get("/admin/fund-requests")
+async def get_fund_requests(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(database.get_db),
+):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Sin permisos.")
+    rows = (
+        db.query(models.FundRequest)
+        .filter(models.FundRequest.status == "pending")
+        .order_by(models.FundRequest.created_at.desc())
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "user_id": r.user_id,
+            "username": r.user.username,
+            "full_name": r.user.full_name,
+            "wallet_address": r.wallet_address,
+            "pol_amount": r.pol_amount,
+            "usdc_amount": r.usdc_amount,
+            "created_at": r.created_at.isoformat(),
+        }
+        for r in rows
+    ]
+
+
+@app.post("/admin/fund-requests/{request_id}/approve")
+async def approve_fund_request(
+    request_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(database.get_db),
+):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Sin permisos.")
+
+    fund_req = db.query(models.FundRequest).filter(models.FundRequest.id == request_id).first()
+    if not fund_req:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada.")
+    if fund_req.status != "pending":
+        raise HTTPException(status_code=400, detail="La solicitud ya fue procesada.")
+
+    try:
+        hash_pol, hash_usdc = blockchain.send_test_funds(
+            fund_req.wallet_address, fund_req.pol_amount, fund_req.usdc_amount
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error enviando fondos: {e}")
+
+    fund_req.status = "approved"
+    fund_req.processed_at = datetime.utcnow()
+    fund_req.tx_hash_pol = hash_pol
+    fund_req.tx_hash_usdc = hash_usdc
+    db.commit()
+
+    await create_notification(
+        db, fund_req.user_id,
+        "Fondos de prueba recibidos",
+        f"Has recibido {fund_req.pol_amount} POL y {int(fund_req.usdc_amount)} USDC en tu wallet.",
+        "INFO",
+    )
+    return {"status": "approved", "tx_hash_pol": hash_pol, "tx_hash_usdc": hash_usdc}
+
+
+@app.post("/admin/fund-requests/{request_id}/reject")
+async def reject_fund_request(
+    request_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(database.get_db),
+):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Sin permisos.")
+
+    fund_req = db.query(models.FundRequest).filter(models.FundRequest.id == request_id).first()
+    if not fund_req:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada.")
+    if fund_req.status != "pending":
+        raise HTTPException(status_code=400, detail="La solicitud ya fue procesada.")
+
+    fund_req.status = "rejected"
+    fund_req.processed_at = datetime.utcnow()
+    db.commit()
+
+    await create_notification(
+        db, fund_req.user_id,
+        "Solicitud de fondos rechazada",
+        "Tu solicitud de fondos de prueba fue rechazada por el administrador.",
+        "INFO",
+    )
+    return {"status": "rejected"}
+
+
+# ===============================================================================
 #  COMPRA VENTA VISUALIZACIÓN
 # ===============================================================================
 @app.post("/nfts/{token_id}/list")
