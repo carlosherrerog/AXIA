@@ -1693,8 +1693,7 @@ export default function AdminScreen({ route, navigation }) {
           <ContractsPanel colors={colors} />
 
           {/* ── Solicitudes de fondos de prueba ── */}
-          {fundRequests.length > 0 && (
-            <View style={{
+          <View style={{
               backgroundColor: colors.backgroundAlt,
               borderRadius: 14, borderWidth: 1, borderColor: '#22c55e40',
               marginBottom: 16, overflow: 'hidden',
@@ -1720,7 +1719,12 @@ export default function AdminScreen({ route, navigation }) {
                     <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{fundRequests.length}</Text>
                   </View>
                 </View>
-                {fundRequests.map(req => (
+                {fundRequests.length === 0 ? (
+                  <View style={{ alignItems: 'center', paddingVertical: 16, gap: 6 }}>
+                    <Ionicons name="checkmark-circle-outline" size={28} color="#22c55e50" />
+                    <Text style={{ color: colors.textMuted, fontSize: 13 }}>Sin solicitudes pendientes</Text>
+                  </View>
+                ) : fundRequests.map(req => (
                   <FundRequestCard
                     key={req.id}
                     req={req}
@@ -1732,7 +1736,6 @@ export default function AdminScreen({ route, navigation }) {
                 ))}
               </View>
             </View>
-          )}
 
           {/* Tabs */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
