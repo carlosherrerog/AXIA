@@ -5,22 +5,22 @@
     "scheme": "axia",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/axia-icons/axia-wordmark-purple-1024.png",
+    "icon": "./assets/axia-icons/axia-icon-rounded-purple-1024.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/axia-icons/axia-wordmark-purple-1024.png",
+      "image": "./assets/axia-icons/axia-icon-rounded-purple-1024.png",
       "resizeMode": "contain",
       "backgroundColor": "#0d0d0d"
     },
     "ios": {
       "supportsTablet": true,
-      "icon": "./assets/axia-icons/axia-wordmark-purple-1024.png"
+      "icon": "./assets/axia-icons/axia-icon-rounded-purple-1024.png"
     },
     "android": {
       "package": "com.axia.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/axia-icons/axia-wordmark-purple-1024.png",
+        "foregroundImage": "./assets/axia-icons/axia-icon-rounded-purple-1024.png",
         "backgroundColor": "#0d0d0d"
       },
       "edgeToEdgeEnabled": true,
