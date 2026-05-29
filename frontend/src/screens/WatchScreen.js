@@ -221,7 +221,7 @@ export default function WatchScreen({ route, navigation }) {
       Alert.alert("Billetera no detectada", "Prueba desde el ordenador con MetaMask instalado, o instala la app en Android.");
       return;
     }
-    if (Platform.OS !== 'web' || !ethProvider) {
+    if (!ethProvider) {
       Alert.alert("Wallet requerida", "Es necesario firmar la transacción desde un navegador con una wallet conectada.");
       return;
     }
@@ -330,7 +330,7 @@ export default function WatchScreen({ route, navigation }) {
       Alert.alert("Billetera no detectada", "Prueba desde el ordenador con MetaMask instalado, o instala la app en Android.");
       return;
     }
-    if (Platform.OS !== 'web' || !ethProvider) {
+    if (!ethProvider) {
       Alert.alert("Wallet requerida", "Es necesario firmar la transacción desde un navegador con MetaMask conectado.");
       return;
     }
@@ -504,7 +504,7 @@ export default function WatchScreen({ route, navigation }) {
       Alert.alert("Billetera no detectada", "Prueba desde el ordenador con MetaMask instalado, o instala la app en Android.");
       return;
     }
-    if (Platform.OS !== 'web' || !ethProvider) {
+    if (!ethProvider) {
       Alert.alert("Wallet requerida", "Es necesario firmar la transacción desde un navegador.");
       return;
     }
@@ -545,7 +545,7 @@ export default function WatchScreen({ route, navigation }) {
       Alert.alert("Billetera no detectada", "Prueba desde el ordenador con MetaMask instalado, o instala la app en Android.");
       return;
     }
-    if (Platform.OS !== 'web' || !ethProvider) {
+    if (!ethProvider) {
       Alert.alert("Wallet requerida", "Necesitas una wallet conectada para confirmar la entrega.");
       return;
     }
@@ -621,7 +621,7 @@ export default function WatchScreen({ route, navigation }) {
       Alert.alert("Billetera no detectada", "Prueba desde el ordenador con MetaMask instalado, o instala la app en Android.");
       return;
     }
-    if (Platform.OS !== 'web' || !ethProvider) {
+    if (!ethProvider) {
       Alert.alert("Wallet requerida", "Es necesario firmar la transacción desde un navegador.");
       return;
     }
