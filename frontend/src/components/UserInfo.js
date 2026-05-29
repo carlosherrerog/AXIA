@@ -38,7 +38,7 @@ export default function UserInfo({ loggedUser, showAlert, onSettings, noMargin =
       const provider = new ethers.JsonRpcProvider(AMOY_RPC);
       const polBal = await provider.getBalance(address);
       setPolBalance(fmt(ethers.formatEther(polBal), 4));
-      const usdcAddress = process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS || '0x967187957d31d0912aE57cad1B51F764339AaEe6';
+      const usdcAddress = process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS || '0xBF3B419496a24f94b0F4DD83bbccA501Bd9F8620';
       const abi = ['function balanceOf(address) view returns (uint256)'];
       const contract = new ethers.Contract(usdcAddress, abi, provider);
       const usdcBal = await contract.balanceOf(address);
@@ -55,7 +55,7 @@ export default function UserInfo({ loggedUser, showAlert, onSettings, noMargin =
 
   useEffect(() => {
     if (!loggedUser?.wallet_address) return;
-    const usdcAddress = process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS || '0x967187957d31d0912aE57cad1B51F764339AaEe6';
+    const usdcAddress = process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS || '0xBF3B419496a24f94b0F4DD83bbccA501Bd9F8620';
     const AMOY_RPC = process.env.EXPO_PUBLIC_RPC_URL || 'https://rpc-amoy.polygon.technology';
     const provider = new ethers.JsonRpcProvider(AMOY_RPC);
     const abi = ['event Transfer(address indexed from, address indexed to, uint256 value)'];

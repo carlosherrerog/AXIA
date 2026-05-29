@@ -907,7 +907,7 @@ const CONTRACTS = [
     label: 'WatchNFT',
     icon: 'disc-outline',
     color: '#8b5cf6',
-    address: process.env.EXPO_PUBLIC_WATCH_NFT_ADDRESS || '0xbBfCa1b8404Dc43238C4A359E8454632f00c292F',
+    address: process.env.EXPO_PUBLIC_WATCH_NFT_ADDRESS || '0x48F996eb99127A5858fb88670C0F670403B2a03D',
     desc: 'ERC-721 · Autenticación de relojes',
   },
   {
@@ -915,7 +915,7 @@ const CONTRACTS = [
     label: 'Marketplace',
     icon: 'storefront-outline',
     color: '#3b82f6',
-    address: process.env.EXPO_PUBLIC_MARKETPLACE_ADDRESS || '0xe7Be5Fd0162f7f2fbC5851FB9DC2f5b4b81F63d6',
+    address: process.env.EXPO_PUBLIC_MARKETPLACE_ADDRESS || '0xAac2855fDc5fA3A3d81fEe442662E44f98985574',
     desc: 'Escrow · Compraventa y liquidaciones',
   },
   {
@@ -923,7 +923,7 @@ const CONTRACTS = [
     label: 'WatchAuction',
     icon: 'hammer-outline',
     color: '#f59e0b',
-    address: process.env.EXPO_PUBLIC_AUCTION_ADDRESS || '0x701EAa91aeB8588694B116C004D1EaAC7f55F2F2',
+    address: process.env.EXPO_PUBLIC_AUCTION_ADDRESS || '0x3D3A0338BD632bFE6FF3F2f60AB54ee9fcFeE97a',
     desc: 'Subastas con puja mínima',
   },
   {
@@ -931,7 +931,7 @@ const CONTRACTS = [
     label: 'Signature',
     icon: 'shield-checkmark-outline',
     color: '#10b981',
-    address: process.env.EXPO_PUBLIC_SIGNATURE_VERIFIER_ADDRESS || '0x57057749e6aF1b21070FA2A4e5D4359AA2711735',
+    address: process.env.EXPO_PUBLIC_SIGNATURE_VERIFIER_ADDRESS || '0x867646fC1f7F7Eb24bEfdfdBE8130453226283ca',
     desc: 'Verificación de seguridad NFC',
   },
   {
@@ -939,7 +939,7 @@ const CONTRACTS = [
     label: 'MockUSDC',
     icon: 'cash-outline',
     color: '#22c55e',
-    address: process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS || '0x967187957d31d0912aE57cad1B51F764339AaEe6',
+    address: process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS || '0xBF3B419496a24f94b0F4DD83bbccA501Bd9F8620',
     desc: 'Stablecoin de pagos (USDC)',
   },
 ];
@@ -1192,7 +1192,7 @@ export default function AdminScreen({ route, navigation }) {
       const provider = new ethers.JsonRpcProvider(AMOY_RPC);
       const pol = await provider.getBalance(address);
       setPolBalance(fmt(ethers.formatEther(pol), 4));
-      const usdcAddress = process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS || '0x967187957d31d0912aE57cad1B51F764339AaEe6';
+      const usdcAddress = process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS || '0xBF3B419496a24f94b0F4DD83bbccA501Bd9F8620';
       const contract = new ethers.Contract(
         usdcAddress,
         ['function balanceOf(address) view returns (uint256)'],
