@@ -446,8 +446,8 @@ function ToolConfigSection({ loggedUser, expanded, onToggle, colors }) {
       {expanded && (
         <View style={{ backgroundColor: colors.backgroundAlt, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 16 }}>
           <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18, marginTop: 10, marginBottom: 14 }}>
-            Copia estos valores al archivo <Text style={{ color: colors.primaryLight, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>.env</Text> de la herramienta de escritorio para configurarla.
-            {'\n'}La <Text style={{ color: colors.primaryLight, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>PRIVATE_KEY</Text> y las claves de <Text style={{ color: colors.primaryLight }}>Pinata</Text> debes añadirlas tú manualmente (no se muestran por seguridad).
+            Introduce estos valores en la pantalla de <Text style={{ color: colors.primaryLight, fontWeight: '600' }}>Configuración</Text> de la herramienta de escritorio AXIA Manufacturer Tool.
+            {'\n'}Tu <Text style={{ color: colors.primaryLight, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>PRIVATE_KEY</Text> y las claves de <Text style={{ color: colors.primaryLight }}>Pinata</Text> debes introducirlas tú en la misma pantalla (no se muestran aquí por seguridad).
           </Text>
 
           {rows.map(({ key, label, value, note }) => (
