@@ -20,10 +20,10 @@ import { resolveImageUri } from '../utils/ipfs';
 import { waitForTx, openMetaMask, GAS_OVERRIDES } from '../utils/txUtils';
 import WatchHistoryTab from '../components/WatchHistoryTab';
 
-const NFT_ADDRESS         = process.env.EXPO_PUBLIC_WATCH_NFT_ADDRESS     || '0x48F996eb99127A5858fb88670C0F670403B2a03D';
-const MARKETPLACE_ADDRESS = process.env.EXPO_PUBLIC_MARKETPLACE_ADDRESS   || '0xAac2855fDc5fA3A3d81fEe442662E44f98985574';
-const AUCTION_ADDRESS     = process.env.EXPO_PUBLIC_AUCTION_ADDRESS        || '0x3D3A0338BD632bFE6FF3F2f60AB54ee9fcFeE97a';
-const USDC_ADDRESS        = process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS  || '0xBF3B419496a24f94b0F4DD83bbccA501Bd9F8620';
+const NFT_ADDRESS         = process.env.EXPO_PUBLIC_WATCH_NFT_ADDRESS     || '0x00623aeAaE1Dc90A34754893db84145fECfCF539';
+const MARKETPLACE_ADDRESS = process.env.EXPO_PUBLIC_MARKETPLACE_ADDRESS   || '0x1eaea56137Dd520e77aE34851F9b13BC6658ADf4';
+const AUCTION_ADDRESS     = process.env.EXPO_PUBLIC_AUCTION_ADDRESS        || '0x4DaB374d75a890bB0311C05063a9EfB4ce95229e';
+const USDC_ADDRESS        = process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS  || '0x7BE858258f6aF7D21016e90E1D011F3D8705A634';
 const POLYGONSCAN_BASE    = 'https://amoy.polygonscan.com';
 
 // ABI mínimo para aprobar el token USDC
