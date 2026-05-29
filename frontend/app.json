@@ -7,7 +7,6 @@
     "orientation": "portrait",
     "icon": "./assets/axia-icons/axia-icon-rounded-purple-1024.png",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": false,
     "splash": {
       "image": "./assets/axia-icons/axia-icon-rounded-purple-1024.png",
       "resizeMode": "contain",
@@ -18,20 +17,10 @@
       "icon": "./assets/axia-icons/axia-icon-rounded-purple-1024.png"
     },
     "android": {
-      "package": "com.axia.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/axia-icons/axia-icon-rounded-purple-1024.png",
         "backgroundColor": "#0d0d0d"
-      },
-      "edgeToEdgeEnabled": true,
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [{ "scheme": "axia" }],
-          "category": ["BROWSABLE", "DEFAULT"]
-        }
-      ]
+      }
     },
     "web": {
       "favicon": "./assets/axia-icons/icono-AXIA.png",

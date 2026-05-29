@@ -17,25 +17,12 @@ import AlertModal, { useAlert } from './AlertModal';
 let useWeb3Modal = () => ({ open: null });
 let useWeb3ModalProvider = () => ({ walletProvider: null });
 let useDisconnect = () => ({ disconnect: null });
-if (Platform.OS === 'web') {
-  try {
-    const wc = require('@web3modal/ethers/react');
-    useWeb3Modal = wc.useWeb3Modal;
-    useWeb3ModalProvider = wc.useWeb3ModalProvider;
-    useDisconnect = wc.useDisconnect;
-  } catch {}
-} else {
-  try {
-    const ak = require('@reown/appkit-react-native');
-    useWeb3Modal = ak.useAppKit;
-    useDisconnect = ak.useDisconnect;
-    useWeb3ModalProvider = () => {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      const { walletProvider } = ak.useAppKitProvider('eip155');
-      return { walletProvider };
-    };
-  } catch {}
-}
+try {
+  const wc = require('@web3modal/ethers/react');
+  useWeb3Modal = wc.useWeb3Modal;
+  useWeb3ModalProvider = wc.useWeb3ModalProvider;
+  useDisconnect = wc.useDisconnect;
+} catch {}
 
 export default function GlobalHeader({
   loggedUser,
