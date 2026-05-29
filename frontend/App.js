@@ -12,7 +12,10 @@ if (Platform.OS !== 'web') { require('./src/wallet/appkit-native'); }
 
 let AppKitModal = null;
 try {
-  if (Platform.OS !== 'web') AppKitModal = require('@reown/appkit-react-native').AppKit;
+  if (Platform.OS !== 'web') {
+    const { appKitReady } = require('./src/wallet/appkit-native');
+    if (appKitReady) AppKitModal = require('@reown/appkit-react-native').AppKit;
+  }
 } catch {}
 
 // IMPORTACIÓN DE PANTALLAS

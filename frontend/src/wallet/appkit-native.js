@@ -1,5 +1,7 @@
+let appKitReady = false;
+
 try {
-  const { createAppKit, defaultConfig } = require('@reown/appkit-react-native');
+  const { createAppKit } = require('@reown/appkit-react-native');
 
   const PROJECT_ID = '25fe0c2191056d61096ff4c82f8a07f7';
 
@@ -22,8 +24,12 @@ try {
   createAppKit({
     projectId: PROJECT_ID,
     networks:  [amoy],
-    config:    defaultConfig({ metadata }),
+    metadata,
   });
+
+  appKitReady = true;
 } catch (e) {
   console.warn('[AppKit] Error inicializando Reown AppKit:', e?.message);
 }
+
+module.exports = { appKitReady };
