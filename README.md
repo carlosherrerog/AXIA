@@ -37,9 +37,17 @@ El proyecto es un monorepo con tres servicios independientes desplegables:
 
 Verificables en [Amoy Polygonscan](https://amoy.polygonscan.com).
 
-### Polygon mainnet (pendiente de despliegue en producción)
+### Polygon mainnet (desplegado, no activo en esta demo)
 
-Actualmente el proyecto opera en Polygon Amoy (testnet). El despliegue en mainnet se realizará en la fase de producción con las direcciones definitivas.
+| Contrato | Dirección |
+|---|---|
+| WatchNFT | `0x8725a60F432EDCaA3dF1d7987e99B9C18c465988` |
+| WatchMarketplace | `0x867646fC1f7F7Eb24bEfdfdBE8130453226283ca` |
+| WatchAuction | `0xAac2855fDc5fA3A3d81fEe442662E44f98985574` |
+| WatchSignature | `0xBF3B419496a24f94b0F4DD83bbccA501Bd9F8620` |
+| MockUSDC | `0x48F996eb99127A5858fb88670C0F670403B2a03D` |
+
+Verificables en [Polygonscan](https://polygonscan.com).
 
 ## Roles y flujos de negocio
 
