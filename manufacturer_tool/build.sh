@@ -11,10 +11,16 @@ pyinstaller \
   --windowed \
   --name "AXIA-Manufacturer" \
   --add-data "abi:abi" \
+  --add-data "icons:icons" \
   --hidden-import "web3" \
   --hidden-import "web3.middleware" \
+  --hidden-import "web3.providers" \
   --hidden-import "smartcard" \
+  --hidden-import "smartcard.System" \
+  --hidden-import "smartcard.util" \
   --hidden-import "PIL" \
+  --hidden-import "PIL.Image" \
+  --hidden-import "PIL.ImageTk" \
   --clean \
   main.py
 
