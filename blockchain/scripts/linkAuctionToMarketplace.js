@@ -8,8 +8,8 @@ const { ethers } = require("hardhat");
  * Ejecutar con: npx hardhat run scripts/linkAuctionToMarketplace.js --network amoy
  */
 async function main() {
-  const MARKETPLACE_ADDRESS = "0x57057749e6aF1b21070FA2A4e5D4359AA2711735";
-  const AUCTION_ADDRESS     = "0xe7Be5Fd0162f7f2fbC5851FB9DC2f5b4b81F63d6";
+  const MARKETPLACE_ADDRESS = "0x867646fC1f7F7Eb24bEfdfdBE8130453226283ca";
+  const AUCTION_ADDRESS     = "0xAac2855fDc5fA3A3d81fEe442662E44f98985574";
 
   const [deployer] = await ethers.getSigners();
   console.log("Ejecutando con la cuenta:", deployer.address);

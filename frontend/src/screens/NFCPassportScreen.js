@@ -12,9 +12,9 @@ import { resolveImageUri } from '../utils/ipfs';
 import WatchHistoryTab from '../components/WatchHistoryTab';
 import WatchDetailsTab from '../components/WatchDetailsTab';
 
-const NFT_ADDRESS         = process.env.EXPO_PUBLIC_WATCH_NFT_ADDRESS    || '0xbBfCa1b8404Dc43238C4A359E8454632f00c292F';
-const MARKETPLACE_ADDRESS = process.env.EXPO_PUBLIC_MARKETPLACE_ADDRESS  || '0xe7Be5Fd0162f7f2fbC5851FB9DC2f5b4b81F63d6';
-const AUCTION_ADDRESS     = process.env.EXPO_PUBLIC_AUCTION_ADDRESS      || '0x701EAa91aeB8588694B116C004D1EaAC7f55F2F2';
+const NFT_ADDRESS         = process.env.EXPO_PUBLIC_WATCH_NFT_ADDRESS    || '0x48F996eb99127A5858fb88670C0F670403B2a03D';
+const MARKETPLACE_ADDRESS = process.env.EXPO_PUBLIC_MARKETPLACE_ADDRESS  || '0xAac2855fDc5fA3A3d81fEe442662E44f98985574';
+const AUCTION_ADDRESS     = process.env.EXPO_PUBLIC_AUCTION_ADDRESS      || '0x3D3A0338BD632bFE6FF3F2f60AB54ee9fcFeE97a';
 
 const POLYGONSCAN_BASE = 'https://amoy.polygonscan.com';
 

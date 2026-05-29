@@ -16,7 +16,7 @@ import { roleColors } from '../themes/styles';
 import GlobalHeader from '../components/GlobalHeader';
 import Marketplace_ABI from '../contracts/WatchMarketplace.json';
 
-const MARKETPLACE_ADDRESS = process.env.EXPO_PUBLIC_MARKETPLACE_ADDRESS || '0xe7Be5Fd0162f7f2fbC5851FB9DC2f5b4b81F63d6';
+const MARKETPLACE_ADDRESS = process.env.EXPO_PUBLIC_MARKETPLACE_ADDRESS || '0xAac2855fDc5fA3A3d81fEe442662E44f98985574';
 
 const STATE_INFO = {
   1: { label: 'En venta',   color: '#8b5cf6', icon: 'pricetag-outline'       },
