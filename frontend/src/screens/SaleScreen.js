@@ -116,7 +116,7 @@ export default function SaleScreen({ route, navigation }) {
       showAlert('Billetera no detectada', 'Prueba desde el ordenador con MetaMask instalado, o instala la app en Android.', 'warning');
       return;
     }
-    if (Platform.OS !== 'web' || !ethProvider) {
+    if (!ethProvider) {
       showAlert('Wallet requerida', 'Necesitas una wallet conectada para confirmar la entrega.', 'warning');
       return;
     }
