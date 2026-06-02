@@ -1432,6 +1432,7 @@ export default function AdminScreen({ route, navigation }) {
   const { colors } = useTheme();
   const { width }  = useWindowDimensions();
   const isDesktop  = width >= 900;
+  const isWide     = width >= 1300;
   const { user }   = route.params;
 
   const { open: w3mOpen }               = useWeb3Modal();
@@ -1969,6 +1970,65 @@ export default function AdminScreen({ route, navigation }) {
     </View>
   );
 
+  const userManagementPanel = (
+    <>
+      {/* Tabs */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}
+        style={{ marginBottom: 14 }}
+        contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
+        {SECTIONS.map(sec => {
+          const on = activeSection === sec.id;
+          const c  = sec.id === 'pending' ? '#f59e0b'
+            : sec.id === 'users' ? colors.primary
+            : ROLE_META[sec.id]?.color || colors.primary;
+          return (
+            <Pressable key={sec.id} onPress={() => setActiveSection(sec.id)}
+              style={[{
+                flexDirection: 'row', alignItems: 'center', gap: 6,
+                paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, borderWidth: 1.5,
+                borderColor: on ? c : colors.border,
+                backgroundColor: on ? `${c}10` : colors.backgroundAlt,
+              }, Platform.OS === 'web' && { cursor: 'pointer' }]}
+            >
+              <Ionicons name={sec.icon} size={14} color={on ? c : colors.textSecondary} />
+              <Text style={{ color: on ? c : colors.textSecondary, fontWeight: on ? '700' : '500', fontSize: 13 }}>
+                {sec.label}
+              </Text>
+              {sec.badge > 0 && (
+                <View style={{
+                  backgroundColor: sec.id === 'pending' ? '#f59e0b' : ROLE_META[sec.id]?.color || colors.primary,
+                  borderRadius: 9, minWidth: 18, height: 18,
+                  justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4,
+                }}>
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>{sec.badge}</Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      {/* Título sección */}
+      {!loadingUsers && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <View style={{
+            width: 3, height: 16, borderRadius: 2,
+            backgroundColor: activeSection === 'pending' ? '#f59e0b'
+              : activeSection === 'users' ? colors.primary
+              : ROLE_META[activeSection]?.color || colors.primary,
+          }} />
+          <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>
+            {activeSection === 'pending' && `${allPending.length} solicitud${allPending.length !== 1 ? 'es' : ''} pendiente${allPending.length !== 1 ? 's' : ''}`}
+            {['RELOJERO','DEALER','FABRICANTE'].includes(activeSection) && `${users.filter(u => u.roles?.includes(activeSection)).length} ${ROLE_META[activeSection].label.toLowerCase()} activos`}
+            {activeSection === 'users' && `${particulares.length} particular${particulares.length !== 1 ? 'es' : ''}`}
+          </Text>
+        </View>
+      )}
+
+      {renderContent()}
+    </>
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <AdminHeader
@@ -1981,7 +2041,7 @@ export default function AdminScreen({ route, navigation }) {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
-          maxWidth: isDesktop ? 1400 : undefined,
+          maxWidth: isWide ? 1400 : isDesktop ? 1100 : undefined,
           alignSelf: 'center', width: '100%',
           padding: isDesktop ? 24 : 16,
           paddingBottom: 80,
@@ -2063,66 +2123,13 @@ export default function AdminScreen({ route, navigation }) {
             onBurn={handleBurnWatch}
             colors={colors}
           />
+
+          {/* Gestión de usuarios — en pantallas medianas va aquí */}
+          {!isWide && userManagementPanel}
         </View>
 
-        {/* Panel derecho — gestión de usuarios */}
-        <View style={{ flex: 1, minWidth: 0 }}>
-
-          {/* Tabs */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}
-            style={{ marginBottom: 14 }}
-            contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
-            {SECTIONS.map(sec => {
-              const on = activeSection === sec.id;
-              const c  = sec.id === 'pending' ? '#f59e0b'
-                : sec.id === 'users' ? colors.primary
-                : ROLE_META[sec.id]?.color || colors.primary;
-              return (
-                <Pressable key={sec.id} onPress={() => setActiveSection(sec.id)}
-                  style={[{
-                    flexDirection: 'row', alignItems: 'center', gap: 6,
-                    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, borderWidth: 1.5,
-                    borderColor: on ? c : colors.border,
-                    backgroundColor: on ? `${c}10` : colors.backgroundAlt,
-                  }, Platform.OS === 'web' && { cursor: 'pointer' }]}
-                >
-                  <Ionicons name={sec.icon} size={14} color={on ? c : colors.textSecondary} />
-                  <Text style={{ color: on ? c : colors.textSecondary, fontWeight: on ? '700' : '500', fontSize: 13 }}>
-                    {sec.label}
-                  </Text>
-                  {sec.badge > 0 && (
-                    <View style={{
-                      backgroundColor: sec.id === 'pending' ? '#f59e0b' : ROLE_META[sec.id]?.color || colors.primary,
-                      borderRadius: 9, minWidth: 18, height: 18,
-                      justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4,
-                    }}>
-                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>{sec.badge}</Text>
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {/* Título sección */}
-          {!loadingUsers && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <View style={{
-                width: 3, height: 16, borderRadius: 2,
-                backgroundColor: activeSection === 'pending' ? '#f59e0b'
-                  : activeSection === 'users' ? colors.primary
-                  : ROLE_META[activeSection]?.color || colors.primary,
-              }} />
-              <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>
-                {activeSection === 'pending' && `${allPending.length} solicitud${allPending.length !== 1 ? 'es' : ''} pendiente${allPending.length !== 1 ? 's' : ''}`}
-                {['RELOJERO','DEALER','FABRICANTE'].includes(activeSection) && `${users.filter(u => u.roles?.includes(activeSection)).length} ${ROLE_META[activeSection].label.toLowerCase()} activos`}
-                {activeSection === 'users' && `${particulares.length} particular${particulares.length !== 1 ? 'es' : ''}`}
-              </Text>
-            </View>
-          )}
-
-          {renderContent()}
-        </View>
+        {/* Panel derecho — gestión de usuarios (solo pantallas anchas ≥1300) */}
+        {isWide && <View style={{ flex: 1, minWidth: 0 }}>{userManagementPanel}</View>}
       </ScrollView>
 
       {/* Confirmación destruir NFT */}
