@@ -2005,7 +2005,7 @@ export default function AdminScreen({ route, navigation }) {
         {/* Tabs */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
           style={{ marginBottom: 14 }}
-          contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
+          contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
           {SECTIONS.map(sec => {
             const on = activeSection === sec.id;
             const c  = sec.id === 'pending' ? '#f59e0b'
@@ -2014,23 +2014,23 @@ export default function AdminScreen({ route, navigation }) {
             return (
               <Pressable key={sec.id} onPress={() => setActiveSection(sec.id)}
                 style={[{
-                  flexDirection: 'row', alignItems: 'center', gap: 6,
-                  paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, borderWidth: 1.5,
+                  flexDirection: 'row', alignItems: 'center', gap: 5,
+                  paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, borderWidth: 1.5,
                   borderColor: on ? c : colors.border,
                   backgroundColor: on ? `${c}10` : colors.surface,
                 }, Platform.OS === 'web' && { cursor: 'pointer' }]}
               >
-                <Ionicons name={sec.icon} size={14} color={on ? c : colors.textSecondary} />
-                <Text style={{ color: on ? c : colors.textSecondary, fontWeight: on ? '700' : '500', fontSize: 13 }}>
+                <Ionicons name={sec.icon} size={13} color={on ? c : colors.textSecondary} />
+                <Text style={{ color: on ? c : colors.textSecondary, fontWeight: on ? '700' : '500', fontSize: 12 }}>
                   {sec.label}
                 </Text>
                 {sec.badge > 0 && (
                   <View style={{
                     backgroundColor: sec.id === 'pending' ? '#f59e0b' : ROLE_META[sec.id]?.color || colors.primary,
-                    borderRadius: 9, minWidth: 18, height: 18,
-                    justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4,
+                    borderRadius: 8, minWidth: 16, height: 16,
+                    justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3,
                   }}>
-                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>{sec.badge}</Text>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{sec.badge}</Text>
                   </View>
                 )}
               </Pressable>
@@ -2067,7 +2067,7 @@ export default function AdminScreen({ route, navigation }) {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
-          maxWidth: isWide ? 1400 : isDesktop ? 1100 : undefined,
+          maxWidth: isWide ? 1560 : isDesktop ? 1100 : undefined,
           alignSelf: 'center', width: '100%',
           padding: isDesktop ? 24 : 16,
           paddingBottom: 80,
@@ -2155,7 +2155,7 @@ export default function AdminScreen({ route, navigation }) {
         </View>
 
         {/* Panel derecho — gestión de usuarios (solo pantallas anchas ≥1300) */}
-        {isWide && <View style={{ flex: 1, minWidth: 0 }}>{userManagementPanel}</View>}
+        {isWide && <View style={{ flex: 1.4, minWidth: 0 }}>{userManagementPanel}</View>}
       </ScrollView>
 
       {/* Confirmación destruir NFT */}
