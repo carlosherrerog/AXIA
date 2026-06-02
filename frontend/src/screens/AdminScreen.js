@@ -175,13 +175,18 @@ function MarketplaceCard({ paused, loading, onToggle, logisticsStatus, copiedLog
 
   const [editLogistics,        setEditLogistics]        = useState(false);
   const [editAuction,          setEditAuction]          = useState(false);
+  const [editPayToken,         setEditPayToken]         = useState(false);
   const [logisticsDraft,       setLogisticsDraft]       = useState('');
   const [auctionDraft,         setAuctionDraft]         = useState('');
+  const [payTokenDraft,        setPayTokenDraft]        = useState('');
   const [savingL,              setSavingL]              = useState(false);
   const [savingA,              setSavingA]              = useState(false);
+  const [savingPT,             setSavingPT]             = useState(false);
   const [alertL,               setAlertL]               = useState(null);
+  const [alertPT,              setAlertPT]              = useState(null);
   const [logisticsPolBalance,  setLogisticsPolBalance]  = useState(null);
   const [auctionPolBalance,    setAuctionPolBalance]    = useState(null);
+  const currentPayToken = process.env.EXPO_PUBLIC_PAYMENT_TOKEN_ADDRESS || '0x109115cca6Acb934EB55b67cfc4E847111e59A53';
 
   useEffect(() => {
     if (!logisticsStatus) return;
@@ -227,6 +232,17 @@ function MarketplaceCard({ paused, loading, onToggle, logisticsStatus, copiedLog
     } catch (e) {
       setAlertA({ type: 'error', msg: e.response?.data?.detail || 'Error al guardar.' });
     } finally { setSavingA(false); }
+  };
+
+  const handleSavePayToken = async () => {
+    setSavingPT(true);
+    try {
+      await api.post('/admin/set-payment-token', { address: payTokenDraft });
+      setEditPayToken(false);
+      setAlertPT({ type: 'success', msg: 'Token de pago actualizado en el contrato.' });
+    } catch (e) {
+      setAlertPT({ type: 'error', msg: e.response?.data?.detail || 'Error al guardar.' });
+    } finally { setSavingPT(false); }
   };
 
   const AddressRow = ({ label, icon, value, editing, draft, onChangeDraft, onEdit, onSave, onCancel, saving, alert, onDismiss }) => (
@@ -335,7 +351,7 @@ function MarketplaceCard({ paused, loading, onToggle, logisticsStatus, copiedLog
       borderRadius: 16, borderWidth: 1, borderColor: colors.border,
       overflow: 'hidden', marginBottom: 12,
     }}>
-      {/* Estado marketplace */}
+      {/* Estado contratos */}
       <View style={{
         flexDirection: 'row', alignItems: 'center',
         padding: 14, gap: 12,
@@ -349,11 +365,12 @@ function MarketplaceCard({ paused, loading, onToggle, logisticsStatus, copiedLog
           <Ionicons name={active ? 'storefront' : 'pause-circle'} size={18} color={statusColor} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>Marketplace</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>Contratos</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 10, marginBottom: 2 }}>Marketplace + WatchNFT</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusColor }} />
             <Text style={{ color: statusColor, fontSize: 11, fontWeight: '600' }}>
-              {active ? 'Operativo' : 'Pausado'}
+              {active ? 'Operativos' : 'Pausados'}
             </Text>
           </View>
         </View>
@@ -400,6 +417,18 @@ function MarketplaceCard({ paused, loading, onToggle, logisticsStatus, copiedLog
         onSave={handleSaveAuction}
         onCancel={() => setEditAuction(false)}
         saving={savingA} alert={alertA} onDismiss={() => setAlertA(null)}
+      />
+
+      {/* Token de pago */}
+      <AddressRow
+        label="Token de pago (USDC)" icon="cash-outline"
+        value={currentPayToken}
+        editing={editPayToken} draft={payTokenDraft}
+        onChangeDraft={setPayTokenDraft}
+        onEdit={() => { setEditPayToken(true); setPayTokenDraft(currentPayToken); }}
+        onSave={handleSavePayToken}
+        onCancel={() => setEditPayToken(false)}
+        saving={savingPT} alert={alertPT} onDismiss={() => setAlertPT(null)}
       />
     </View>
   );
@@ -897,6 +926,260 @@ function ActiveUserCard({ u, roleColor, onRevoke, colors }) {
   );
 }
 
+// ─── Escrows Panel ────────────────────────────────────────────────────────────
+function EscrowsPanel({ escrows, onConfirm, onRefund, colors }) {
+  const [confirmingId, setConfirmingId] = useState(null);
+  const [refundingId,  setRefundingId]  = useState(null);
+  const [penalizeMap,  setPenalizeMap]  = useState({});
+
+  const STATE_COLOR = { 2: '#f59e0b', 3: '#3b82f6', 4: '#10b981' };
+
+  return (
+    <View style={{
+      backgroundColor: colors.backgroundAlt, borderRadius: 14,
+      borderWidth: 1, borderColor: '#ef444430', marginBottom: 16, overflow: 'hidden',
+    }}>
+      <View style={{ height: 2, backgroundColor: '#ef444460' }} />
+      <View style={{ padding: 14 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <View style={{
+            width: 28, height: 28, borderRadius: 8,
+            backgroundColor: '#ef444418', borderWidth: 1, borderColor: '#ef444440',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Ionicons name="lock-closed-outline" size={14} color="#ef4444" />
+          </View>
+          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, flex: 1 }}>
+            Ventas bloqueadas
+          </Text>
+          <View style={{
+            backgroundColor: escrows.length > 0 ? '#ef4444' : colors.surface,
+            borderRadius: 10, minWidth: 20, height: 20, paddingHorizontal: 6,
+            alignItems: 'center', justifyContent: 'center',
+            borderWidth: escrows.length === 0 ? 1 : 0, borderColor: colors.border,
+          }}>
+            <Text style={{ color: escrows.length > 0 ? '#fff' : colors.textMuted, fontSize: 11, fontWeight: '800' }}>
+              {escrows.length}
+            </Text>
+          </View>
+        </View>
+
+        {escrows.length === 0 ? (
+          <View style={{ alignItems: 'center', paddingVertical: 16, gap: 6 }}>
+            <Ionicons name="checkmark-circle-outline" size={28} color="#10b98150" />
+            <Text style={{ color: colors.textMuted, fontSize: 13 }}>Sin ventas bloqueadas</Text>
+          </View>
+        ) : escrows.map(e => {
+          const stateColor = STATE_COLOR[e.listing_state] || colors.textMuted;
+          const penalize   = penalizeMap[e.token_id] ?? false;
+          return (
+            <View key={e.token_id} style={{
+              backgroundColor: colors.surface, borderRadius: 12,
+              borderWidth: 1, borderColor: colors.border,
+              padding: 12, marginBottom: 10,
+            }}>
+              {/* Cabecera */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <View style={{
+                  backgroundColor: `${stateColor}18`, borderRadius: 8,
+                  paddingHorizontal: 8, paddingVertical: 3,
+                  borderWidth: 1, borderColor: `${stateColor}35`,
+                }}>
+                  <Text style={{ color: stateColor, fontSize: 10, fontWeight: '700' }}>{e.listing_state_label}</Text>
+                </View>
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13, flex: 1 }}>
+                  {e.brand} {e.model}
+                </Text>
+                <Text style={{ color: colors.textMuted, fontSize: 11 }}>#{e.token_id}</Text>
+              </View>
+
+              {/* Info precio */}
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                <View style={{ flex: 1, backgroundColor: colors.backgroundAlt, borderRadius: 8, padding: 8 }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 9, fontWeight: '700', marginBottom: 2 }}>VENDEDOR</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 11 }} numberOfLines={1}>
+                    {e.seller_username ? `@${e.seller_username}` : (e.seller?.slice(0, 8) + '…')}
+                  </Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: colors.backgroundAlt, borderRadius: 8, padding: 8 }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 9, fontWeight: '700', marginBottom: 2 }}>COMPRADOR</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 11 }} numberOfLines={1}>
+                    {e.buyer_username ? `@${e.buyer_username}` : (e.buyer?.slice(0, 8) + '…')}
+                  </Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: colors.backgroundAlt, borderRadius: 8, padding: 8 }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 9, fontWeight: '700', marginBottom: 2 }}>PRECIO</Text>
+                  <Text style={{ color: '#22c55e', fontSize: 12, fontWeight: '800' }}>{e.price_usdc} USDC</Text>
+                </View>
+              </View>
+
+              {/* Toggle penalización (solo ventas P2P con depósito) */}
+              {e.is_p2p && e.seller_deposit_usdc > 0 && (
+                <TouchableOpacity
+                  onPress={() => setPenalizeMap(m => ({ ...m, [e.token_id]: !m[e.token_id] }))}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 7,
+                    backgroundColor: penalize ? 'rgba(244,63,94,0.08)' : colors.backgroundAlt,
+                    borderRadius: 8, padding: 8, marginBottom: 8,
+                    borderWidth: 1, borderColor: penalize ? 'rgba(244,63,94,0.25)' : colors.border,
+                  }}
+                >
+                  <View style={{
+                    width: 16, height: 16, borderRadius: 4, borderWidth: 1.5,
+                    borderColor: penalize ? '#ef4444' : colors.textMuted,
+                    backgroundColor: penalize ? '#ef444420' : 'transparent',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {penalize && <Ionicons name="checkmark" size={10} color="#ef4444" />}
+                  </View>
+                  <Text style={{ color: penalize ? '#ef4444' : colors.textSecondary, fontSize: 11, flex: 1 }}>
+                    Penalizar fianza ({e.seller_deposit_usdc} USDC)
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Botones */}
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  onPress={() => { setRefundingId(e.token_id); onRefund(e.token_id, penalize, () => setRefundingId(null)); }}
+                  disabled={confirmingId === e.token_id || refundingId === e.token_id}
+                  style={{
+                    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+                    paddingVertical: 9, borderRadius: 9,
+                    backgroundColor: 'rgba(244,63,94,0.08)',
+                    borderWidth: 1, borderColor: 'rgba(244,63,94,0.25)',
+                    opacity: (confirmingId === e.token_id || refundingId === e.token_id) ? 0.5 : 1,
+                  }}
+                >
+                  {refundingId === e.token_id
+                    ? <ActivityIndicator size="small" color="#ef4444" />
+                    : <><Ionicons name="arrow-undo-outline" size={13} color="#ef4444" />
+                        <Text style={{ color: '#ef4444', fontWeight: '700', fontSize: 12 }}>Reembolsar</Text></>
+                  }
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => { setConfirmingId(e.token_id); onConfirm(e.token_id, () => setConfirmingId(null)); }}
+                  disabled={confirmingId === e.token_id || refundingId === e.token_id}
+                  style={{
+                    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+                    paddingVertical: 9, borderRadius: 9,
+                    backgroundColor: 'rgba(16,185,129,0.1)',
+                    borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)',
+                    opacity: (confirmingId === e.token_id || refundingId === e.token_id) ? 0.5 : 1,
+                  }}
+                >
+                  {confirmingId === e.token_id
+                    ? <ActivityIndicator size="small" color="#10b981" />
+                    : <><Ionicons name="checkmark-done-outline" size={13} color="#10b981" />
+                        <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 12 }}>Forzar entrega</Text></>
+                  }
+                </TouchableOpacity>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// ─── Burn Panel ────────────────────────────────────────────────────────────────
+function BurnPanel({ burnableWatches, onBurn, colors }) {
+  const [burningId, setBurningId] = useState(null);
+  const STATE_COLOR = { 1: '#f59e0b', 2: '#6366f1' };
+  const STATE_ICON  = { 1: 'alert-circle-outline', 2: 'help-circle-outline' };
+
+  return (
+    <View style={{
+      backgroundColor: colors.backgroundAlt, borderRadius: 14,
+      borderWidth: 1, borderColor: '#f59e0b30', marginBottom: 16, overflow: 'hidden',
+    }}>
+      <View style={{ height: 2, backgroundColor: '#f59e0b50' }} />
+      <View style={{ padding: 14 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <View style={{
+            width: 28, height: 28, borderRadius: 8,
+            backgroundColor: '#f59e0b18', borderWidth: 1, borderColor: '#f59e0b40',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Ionicons name="flame-outline" size={14} color="#f59e0b" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Destruir NFT</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 10 }}>Solo relojes Robados o Perdidos</Text>
+          </View>
+          <View style={{
+            backgroundColor: burnableWatches.length > 0 ? '#f59e0b' : colors.surface,
+            borderRadius: 10, minWidth: 20, height: 20, paddingHorizontal: 6,
+            alignItems: 'center', justifyContent: 'center',
+            borderWidth: burnableWatches.length === 0 ? 1 : 0, borderColor: colors.border,
+          }}>
+            <Text style={{ color: burnableWatches.length > 0 ? '#fff' : colors.textMuted, fontSize: 11, fontWeight: '800' }}>
+              {burnableWatches.length}
+            </Text>
+          </View>
+        </View>
+
+        {burnableWatches.length === 0 ? (
+          <View style={{ alignItems: 'center', paddingVertical: 16, gap: 6 }}>
+            <Ionicons name="shield-checkmark-outline" size={28} color="#10b98150" />
+            <Text style={{ color: colors.textMuted, fontSize: 13 }}>Sin relojes robados o perdidos</Text>
+          </View>
+        ) : burnableWatches.map(w => {
+          const stateColor = STATE_COLOR[w.security_state] || '#ef4444';
+          return (
+            <View key={w.token_id} style={{
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+              backgroundColor: colors.surface, borderRadius: 10,
+              borderWidth: 1, borderColor: `${stateColor}25`,
+              padding: 10, marginBottom: 8,
+            }}>
+              <View style={{
+                width: 32, height: 32, borderRadius: 8,
+                backgroundColor: `${stateColor}15`, borderWidth: 1, borderColor: `${stateColor}30`,
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Ionicons name={STATE_ICON[w.security_state] || 'alert-circle-outline'} size={16} color={stateColor} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>
+                  {w.brand} {w.model}
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                  <View style={{
+                    backgroundColor: `${stateColor}18`, borderRadius: 4,
+                    paddingHorizontal: 5, paddingVertical: 1,
+                  }}>
+                    <Text style={{ color: stateColor, fontSize: 9, fontWeight: '700' }}>{w.state_label.toUpperCase()}</Text>
+                  </View>
+                  <Text style={{ color: colors.textMuted, fontSize: 10 }}>#{w.token_id}</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={() => { setBurningId(w.token_id); onBurn(w.token_id, () => setBurningId(null)); }}
+                disabled={burningId === w.token_id}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 4,
+                  paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+                  backgroundColor: 'rgba(239,68,68,0.08)',
+                  borderWidth: 1, borderColor: 'rgba(239,68,68,0.25)',
+                  opacity: burningId === w.token_id ? 0.5 : 1,
+                }}
+              >
+                {burningId === w.token_id
+                  ? <ActivityIndicator size="small" color="#ef4444" />
+                  : <><Ionicons name="flame" size={13} color="#ef4444" />
+                      <Text style={{ color: '#ef4444', fontWeight: '700', fontSize: 12 }}>Destruir</Text></>
+                }
+              </TouchableOpacity>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 // ─── Pantalla principal ───────────────────────────────────────────────────────
 const EXPLORER_BASE = 'https://amoy.polygonscan.com/address/';
 const AMOY_RPC      = process.env.EXPO_PUBLIC_RPC_URL;
@@ -1174,6 +1457,9 @@ export default function AdminScreen({ route, navigation }) {
   const [walletCopied,     setWalletCopied]     = useState(false);
   const [fundRequests,     setFundRequests]     = useState([]);
   const [processingFund,   setProcessingFund]   = useState(null);
+  const [escrows,          setEscrows]          = useState([]);
+  const [burnableWatches,  setBurnableWatches]  = useState([]);
+  const [burnConfirm,      setBurnConfirm]      = useState(null); // { tokenId, brand, model }
 
   const fmt = (v, dec = 2) =>
     Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: dec });
@@ -1210,18 +1496,22 @@ export default function AdminScreen({ route, navigation }) {
   const fetchAll = useCallback(async (initial = false) => {
     try {
       if (initial) setLoadingUsers(true);
-      const [resMe, resUsers, resLogistics, resMarket, resFunds] = await Promise.all([
+      const [resMe, resUsers, resLogistics, resMarket, resFunds, resEscrows, resBurnable] = await Promise.all([
         api.get('/users/me'),
         api.get('/admin/users'),
         api.get('/admin/logistics-status').catch(() => ({ data: null })),
         api.get('/admin/marketplace-status').catch(() => ({ data: null })),
         api.get('/admin/fund-requests').catch(() => ({ data: [] })),
+        api.get('/admin/escrows').catch(() => ({ data: [] })),
+        api.get('/admin/watches/burnable').catch(() => ({ data: [] })),
       ]);
       setLoggedUser(resMe.data);
       setUsers(resUsers.data);
       setLogisticsStatus(resLogistics.data);
       if (resMarket.data) setMarketPaused(resMarket.data.paused);
       setFundRequests(resFunds.data || []);
+      setEscrows(resEscrows.data || []);
+      setBurnableWatches(resBurnable.data || []);
     } catch (e) {
       console.error('Admin fetch error:', e);
     } finally {
@@ -1290,14 +1580,52 @@ export default function AdminScreen({ route, navigation }) {
     }
   };
 
+  const handleConfirmEscrow = async (tokenId, onDone) => {
+    try {
+      await api.post(`/admin/escrows/${tokenId}/confirm`);
+      showAlert('Entrega forzada', `La venta del reloj #${tokenId} ha sido finalizada.`, 'success');
+      fetchAll(false);
+    } catch (e) {
+      showAlert('Error', e.response?.data?.detail || 'No se pudo forzar la entrega.', 'error');
+    } finally { onDone?.(); }
+  };
+
+  const handleRefundEscrow = async (tokenId, penalize, onDone) => {
+    try {
+      await api.post(`/admin/escrows/${tokenId}/refund`, { penalize });
+      showAlert('Reembolso realizado', `La venta del reloj #${tokenId} ha sido cancelada y reembolsada.`, 'success');
+      fetchAll(false);
+    } catch (e) {
+      showAlert('Error', e.response?.data?.detail || 'No se pudo reembolsar el escrow.', 'error');
+    } finally { onDone?.(); }
+  };
+
+  const handleBurnWatch = async (tokenId, onDone) => {
+    const w = burnableWatches.find(x => x.token_id === tokenId);
+    setBurnConfirm({ tokenId, brand: w?.brand || '', model: w?.model || '' });
+    onDone?.();
+  };
+
+  const executeBurn = async () => {
+    const { tokenId } = burnConfirm;
+    setBurnConfirm(null);
+    try {
+      await api.post(`/admin/watches/${tokenId}/burn`);
+      showAlert('NFT destruido', `El NFT #${tokenId} ha sido destruido permanentemente en la blockchain.`, 'success');
+      fetchAll(false);
+    } catch (e) {
+      showAlert('Error', e.response?.data?.detail || 'No se pudo destruir el NFT.', 'error');
+    }
+  };
+
   const handleToggleMarket = async () => {
     setLoadingPause(true);
     try {
       const { data } = await api.post(marketPaused ? '/admin/marketplace-resume' : '/admin/marketplace-pause');
       setMarketPaused(data.paused);
       showAlert(
-        data.paused ? 'Marketplace pausado' : 'Marketplace reanudado',
-        data.paused ? 'Las transacciones han sido bloqueadas.' : 'El marketplace vuelve a estar operativo.',
+        data.paused ? 'Contratos pausados' : 'Contratos reanudados',
+        data.paused ? 'Marketplace y WatchNFT han sido pausados.' : 'Marketplace y WatchNFT vuelven a estar operativos.',
         data.paused ? 'warning' : 'success',
       );
       if (loggedUser?.wallet_address) fetchWalletBalances(loggedUser.wallet_address);
@@ -1721,6 +2049,21 @@ export default function AdminScreen({ route, navigation }) {
               </View>
             </View>
 
+          {/* ── Ventas bloqueadas ── */}
+          <EscrowsPanel
+            escrows={escrows}
+            onConfirm={handleConfirmEscrow}
+            onRefund={handleRefundEscrow}
+            colors={colors}
+          />
+
+          {/* ── Destruir NFT ── */}
+          <BurnPanel
+            burnableWatches={burnableWatches}
+            onBurn={handleBurnWatch}
+            colors={colors}
+          />
+
           {/* Tabs */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
             style={{ marginBottom: 14 }}
@@ -1778,6 +2121,56 @@ export default function AdminScreen({ route, navigation }) {
           {renderContent()}
         </View>
       </ScrollView>
+
+      {/* Confirmación destruir NFT */}
+      <Modal visible={!!burnConfirm} transparent animationType="fade" onRequestClose={() => setBurnConfirm(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{
+            backgroundColor: colors.backgroundAlt, borderRadius: 20,
+            padding: 24, width: '85%', maxWidth: 340,
+            alignItems: 'center', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
+          }}>
+            <View style={{
+              width: 56, height: 56, borderRadius: 28, marginBottom: 12,
+              backgroundColor: 'rgba(239,68,68,0.12)',
+              justifyContent: 'center', alignItems: 'center',
+            }}>
+              <Ionicons name="flame" size={28} color="#ef4444" />
+            </View>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 17, marginBottom: 8, textAlign: 'center' }}>
+              Destruir NFT permanentemente
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center', lineHeight: 20, marginBottom: 20 }}>
+              Estás a punto de destruir el NFT{'\n'}
+              <Text style={{ color: colors.text, fontWeight: '600' }}>
+                #{burnConfirm?.tokenId} — {burnConfirm?.brand} {burnConfirm?.model}
+              </Text>
+              {'\n\n'}Esta acción es <Text style={{ color: '#ef4444', fontWeight: '700' }}>IRREVERSIBLE</Text> y eliminará el token ERC-721 de la blockchain.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+              <TouchableOpacity
+                onPress={() => setBurnConfirm(null)}
+                style={{
+                  flex: 1, paddingVertical: 12, borderRadius: 10,
+                  backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: colors.textSecondary, fontWeight: '700', fontSize: 13 }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={executeBurn}
+                style={{
+                  flex: 1, paddingVertical: 12, borderRadius: 10,
+                  backgroundColor: '#ef4444', alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Destruir</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Aviso previo conexión wallet */}
       <Modal visible={walletInfoVisible} transparent animationType="fade" onRequestClose={() => setWalletInfoVisible(false)}>

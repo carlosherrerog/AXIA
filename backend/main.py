@@ -1478,36 +1478,48 @@ async def pause_marketplace(current_user: models.User = Depends(get_current_user
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Acceso denegado.")
     try:
-        tx = blockchain.marketplace_contract.functions.pauseMarketplace().build_transaction({
-            "from": blockchain.ADMIN_ADDRESS,
-            "nonce": blockchain.w3.eth.get_transaction_count(blockchain.ADMIN_ADDRESS),
-            "gas": 100000,
-            "gasPrice": blockchain.w3.eth.gas_price,
+        nonce = blockchain.w3.eth.get_transaction_count(blockchain.ADMIN_ADDRESS)
+        tx_mp = blockchain.marketplace_contract.functions.pauseMarketplace().build_transaction({
+            "from": blockchain.ADMIN_ADDRESS, "nonce": nonce,
+            "gas": 100000, "gasPrice": blockchain.w3.eth.gas_price,
         })
-        signed = blockchain.w3.eth.account.sign_transaction(tx, private_key=blockchain.ADMIN_PRIVATE_KEY)
+        signed = blockchain.w3.eth.account.sign_transaction(tx_mp, private_key=blockchain.ADMIN_PRIVATE_KEY)
         blockchain.w3.eth.send_raw_transaction(signed.raw_transaction)
+        nonce += 1
+        tx_nft = blockchain.watchNFT_contract.functions.pauseContract().build_transaction({
+            "from": blockchain.ADMIN_ADDRESS, "nonce": nonce,
+            "gas": 100000, "gasPrice": blockchain.w3.eth.gas_price,
+        })
+        signed_nft = blockchain.w3.eth.account.sign_transaction(tx_nft, private_key=blockchain.ADMIN_PRIVATE_KEY)
+        blockchain.w3.eth.send_raw_transaction(signed_nft.raw_transaction)
         await manager.broadcast({"type": "marketplace_paused"})
         return {"paused": True}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error pausando marketplace: {e}")
+        raise HTTPException(status_code=500, detail=f"Error pausando contratos: {e}")
 
 @app.post("/admin/marketplace-resume")
 async def resume_marketplace(current_user: models.User = Depends(get_current_user)):
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Acceso denegado.")
     try:
-        tx = blockchain.marketplace_contract.functions.resumeMarketplace().build_transaction({
-            "from": blockchain.ADMIN_ADDRESS,
-            "nonce": blockchain.w3.eth.get_transaction_count(blockchain.ADMIN_ADDRESS),
-            "gas": 100000,
-            "gasPrice": blockchain.w3.eth.gas_price,
+        nonce = blockchain.w3.eth.get_transaction_count(blockchain.ADMIN_ADDRESS)
+        tx_mp = blockchain.marketplace_contract.functions.resumeMarketplace().build_transaction({
+            "from": blockchain.ADMIN_ADDRESS, "nonce": nonce,
+            "gas": 100000, "gasPrice": blockchain.w3.eth.gas_price,
         })
-        signed = blockchain.w3.eth.account.sign_transaction(tx, private_key=blockchain.ADMIN_PRIVATE_KEY)
+        signed = blockchain.w3.eth.account.sign_transaction(tx_mp, private_key=blockchain.ADMIN_PRIVATE_KEY)
         blockchain.w3.eth.send_raw_transaction(signed.raw_transaction)
+        nonce += 1
+        tx_nft = blockchain.watchNFT_contract.functions.resumeContract().build_transaction({
+            "from": blockchain.ADMIN_ADDRESS, "nonce": nonce,
+            "gas": 100000, "gasPrice": blockchain.w3.eth.gas_price,
+        })
+        signed_nft = blockchain.w3.eth.account.sign_transaction(tx_nft, private_key=blockchain.ADMIN_PRIVATE_KEY)
+        blockchain.w3.eth.send_raw_transaction(signed_nft.raw_transaction)
         await manager.broadcast({"type": "marketplace_resumed"})
         return {"paused": False}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reanudando marketplace: {e}")
+        raise HTTPException(status_code=500, detail=f"Error reanudando contratos: {e}")
 
 @app.get("/admin/fees")
 async def get_fees(current_user: models.User = Depends(get_current_user)):
@@ -1625,6 +1637,266 @@ async def set_auction_contract(body: AddressRequest, current_user: models.User =
         return {"ok": True, "address": checksum}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error actualizando contrato de subastas: {e}")
+
+# ===============================================================================
+#  ADMIN — ESCROWS BLOQUEADOS (A8 / A9)
+# ===============================================================================
+
+@app.get("/admin/escrows")
+async def get_blocked_escrows(current_user: models.User = Depends(get_current_user), db: Session = Depends(database.get_db)):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Acceso denegado.")
+    listings = (
+        db.query(models.MarketplaceListing)
+        .filter(models.MarketplaceListing.listing_state.in_([2, 3, 4]))
+        .order_by(models.MarketplaceListing.id)
+        .all()
+    )
+    result = []
+    for l in listings:
+        watch = db.query(models.Watch).filter(models.Watch.token_id == l.token_id).first()
+        seller_user = db.query(models.User).filter(models.User.wallet_address.ilike(l.seller)).first() if l.seller else None
+        buyer_user  = db.query(models.User).filter(models.User.wallet_address.ilike(l.buyer)).first()  if l.buyer  else None
+        state_labels = {2: "Reservado", 3: "Enviado", 4: "Verificado"}
+        result.append({
+            "listing_id":       l.id,
+            "token_id":         l.token_id,
+            "brand":            watch.brand  if watch else "—",
+            "model":            watch.model  if watch else "—",
+            "seller":           l.seller,
+            "seller_username":  seller_user.username if seller_user else None,
+            "buyer":            l.buyer,
+            "buyer_username":   buyer_user.username  if buyer_user  else None,
+            "price_usdc":       round(l.price / 10**6, 2),
+            "seller_deposit_usdc": round(l.seller_deposit / 10**6, 2),
+            "is_p2p":           l.is_p2p,
+            "listing_state":    l.listing_state,
+            "listing_state_label": state_labels.get(l.listing_state, str(l.listing_state)),
+            "created_at":       l.created_at.isoformat() if l.created_at else None,
+        })
+    return result
+
+class RefundEscrowRequest(BaseModel):
+    penalize: bool = False
+
+@app.post("/admin/escrows/{token_id}/refund")
+async def admin_refund_escrow(
+    token_id: int,
+    body: RefundEscrowRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(database.get_db),
+):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Acceso denegado.")
+    listing = db.query(models.MarketplaceListing).filter(
+        models.MarketplaceListing.token_id == token_id,
+        models.MarketplaceListing.listing_state.in_([2, 3, 4]),
+    ).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Escrow activo no encontrado para ese token.")
+    watch = db.query(models.Watch).filter(models.Watch.token_id == token_id).first()
+    try:
+        tx = blockchain.marketplace_contract.functions.refundEscrow(token_id, body.penalize).build_transaction({
+            "from": blockchain.ADMIN_ADDRESS,
+            "nonce": blockchain.w3.eth.get_transaction_count(blockchain.ADMIN_ADDRESS),
+            "gas": 250000,
+            "gasPrice": blockchain.w3.eth.gas_price,
+        })
+        signed = blockchain.w3.eth.account.sign_transaction(tx, private_key=blockchain.ADMIN_PRIVATE_KEY)
+        blockchain.w3.eth.send_raw_transaction(signed.raw_transaction)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en blockchain: {e}")
+
+    buyer_user  = db.query(models.User).filter(models.User.wallet_address.ilike(listing.buyer)).first()  if listing.buyer  else None
+    seller_user = db.query(models.User).filter(models.User.wallet_address.ilike(listing.seller)).first() if listing.seller else None
+
+    if watch:
+        watch.is_listed = False
+        watch.is_public = False
+    db.delete(listing)
+
+    price_str = f"{round(listing.price / 10**6, 2):.2f}"
+    if buyer_user:
+        db.add(models.Notification(
+            user_id=buyer_user.id, watch_id=token_id,
+            title="Venta cancelada — reembolso recibido",
+            message=f"El administrador ha cancelado la venta del reloj {watch.brand if watch else ''} {watch.model if watch else ''}. Has recibido {price_str} USDC de vuelta.",
+            type="INFO", created_at=datetime.now(timezone.utc),
+        ))
+    if seller_user:
+        deposit_msg = " Tu fianza ha sido retenida." if body.penalize and listing.seller_deposit > 0 else ""
+        db.add(models.Notification(
+            user_id=seller_user.id, watch_id=token_id,
+            title="Venta cancelada por el administrador",
+            message=f"El administrador ha cancelado la venta del reloj {watch.brand if watch else ''} {watch.model if watch else ''}.{deposit_msg} El NFT ha vuelto a tu wallet.",
+            type="INFO", created_at=datetime.now(timezone.utc),
+        ))
+    db.commit()
+    await manager.broadcast("update_marketplace")
+    if buyer_user:  await manager.send_to_user(buyer_user.id, "update_users")
+    if seller_user: await manager.send_to_user(seller_user.id, "update_users")
+    return {"ok": True}
+
+@app.post("/admin/escrows/{token_id}/confirm")
+async def admin_confirm_delivery(
+    token_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(database.get_db),
+):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Acceso denegado.")
+    listing = db.query(models.MarketplaceListing).filter(
+        models.MarketplaceListing.token_id == token_id,
+        models.MarketplaceListing.listing_state.in_([2, 3, 4]),
+    ).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Escrow activo no encontrado para ese token.")
+    watch = db.query(models.Watch).filter(models.Watch.token_id == token_id).first()
+    try:
+        tx = blockchain.marketplace_contract.functions.confirmDelivery(token_id).build_transaction({
+            "from": blockchain.ADMIN_ADDRESS,
+            "nonce": blockchain.w3.eth.get_transaction_count(blockchain.ADMIN_ADDRESS),
+            "gas": 300000,
+            "gasPrice": blockchain.w3.eth.gas_price,
+        })
+        signed = blockchain.w3.eth.account.sign_transaction(tx, private_key=blockchain.ADMIN_PRIVATE_KEY)
+        blockchain.w3.eth.send_raw_transaction(signed.raw_transaction)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en blockchain: {e}")
+
+    buyer_user  = db.query(models.User).filter(models.User.wallet_address.ilike(listing.buyer)).first()  if listing.buyer  else None
+    seller_user = db.query(models.User).filter(models.User.wallet_address.ilike(listing.seller)).first() if listing.seller else None
+    old_owner_id = watch.owner_id if watch else None
+    price_str = f"{round(listing.price / 10**6, 2):.2f}"
+
+    if watch and buyer_user:
+        watch.owner_id     = buyer_user.id
+        watch.owner_wallet = listing.buyer
+        watch.is_listed    = False
+        watch.is_public    = False
+    listing.listing_state = 5
+
+    if buyer_user:
+        db.add(models.Notification(
+            user_id=buyer_user.id, watch_id=token_id,
+            title="Entrega confirmada por el administrador",
+            message=f"El administrador ha confirmado la entrega del reloj {watch.brand if watch else ''} {watch.model if watch else ''}. Ya es tuyo.",
+            type="SALE", created_at=datetime.now(timezone.utc),
+        ))
+    if seller_user:
+        db.add(models.Notification(
+            user_id=seller_user.id, watch_id=token_id,
+            title="Venta finalizada por el administrador",
+            message=f"El administrador ha forzado la finalización de la venta de {watch.brand if watch else ''} {watch.model if watch else ''} por {price_str} USDC.",
+            type="SUCCESS", created_at=datetime.now(timezone.utc),
+        ))
+    db.commit()
+    await asyncio.sleep(4)
+    if watch:
+        _resync_ownership_history(watch.token_id, db)
+        try: db.commit()
+        except Exception: db.rollback()
+    await manager.broadcast("update_marketplace")
+    if buyer_user:  await manager.send_to_user(buyer_user.id, "update_users")
+    if seller_user: await manager.send_to_user(seller_user.id, "update_users")
+    return {"ok": True}
+
+# ===============================================================================
+#  ADMIN — DESTRUIR NFT (A7)
+# ===============================================================================
+
+@app.get("/admin/watches/burnable")
+async def get_burnable_watches(current_user: models.User = Depends(get_current_user), db: Session = Depends(database.get_db)):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Acceso denegado.")
+    watches = db.query(models.Watch).filter(
+        models.Watch.security_state.in_([1, 2]),  # 1=Stolen, 2=Lost
+        models.Watch.is_imported == True,
+    ).all()
+    state_labels = {1: "Robado", 2: "Perdido"}
+    return [
+        {
+            "token_id":       w.token_id,
+            "brand":          w.brand,
+            "model":          w.model,
+            "security_state": w.security_state,
+            "state_label":    state_labels.get(w.security_state, "Desconocido"),
+            "owner_wallet":   w.owner_wallet,
+        }
+        for w in watches
+    ]
+
+@app.post("/admin/watches/{token_id}/burn")
+async def admin_burn_watch(
+    token_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(database.get_db),
+):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Acceso denegado.")
+    watch = db.query(models.Watch).filter(models.Watch.token_id == token_id).first()
+    if not watch:
+        raise HTTPException(status_code=404, detail="Reloj no encontrado.")
+    if watch.security_state not in [1, 2]:
+        raise HTTPException(status_code=400, detail="Solo se pueden destruir relojes en estado Robado o Perdido.")
+    try:
+        tx = blockchain.watchNFT_contract.functions.burnWatch(token_id).build_transaction({
+            "from": blockchain.ADMIN_ADDRESS,
+            "nonce": blockchain.w3.eth.get_transaction_count(blockchain.ADMIN_ADDRESS),
+            "gas": 150000,
+            "gasPrice": blockchain.w3.eth.gas_price,
+        })
+        signed = blockchain.w3.eth.account.sign_transaction(tx, private_key=blockchain.ADMIN_PRIVATE_KEY)
+        blockchain.w3.eth.send_raw_transaction(signed.raw_transaction)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en blockchain: {e}")
+
+    owner_user = db.query(models.User).filter(models.User.id == watch.owner_id).first()
+    watch.is_imported    = False
+    watch.security_state = 3  # Destroyed
+    watch.is_listed      = False
+    listing = db.query(models.MarketplaceListing).filter(
+        models.MarketplaceListing.token_id == token_id
+    ).first()
+    if listing:
+        db.delete(listing)
+    if owner_user:
+        db.add(models.Notification(
+            user_id=owner_user.id, watch_id=token_id,
+            title="NFT destruido por el administrador",
+            message=f"El NFT #{token_id} ({watch.brand} {watch.model}) ha sido destruido permanentemente por el administrador.",
+            type="INFO", created_at=datetime.now(timezone.utc),
+        ))
+    db.commit()
+    await manager.broadcast("update_marketplace")
+    if owner_user:
+        await manager.send_to_user(owner_user.id, "update_users")
+    return {"ok": True}
+
+# ===============================================================================
+#  ADMIN — TOKEN DE PAGO (A10)
+# ===============================================================================
+
+@app.post("/admin/set-payment-token")
+async def set_payment_token(body: AddressRequest, current_user: models.User = Depends(get_current_user)):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Acceso denegado.")
+    try:
+        checksum = blockchain.w3.to_checksum_address(body.address)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Dirección de contrato inválida.")
+    try:
+        tx = blockchain.marketplace_contract.functions.setPaymentToken(checksum).build_transaction({
+            "from": blockchain.ADMIN_ADDRESS,
+            "nonce": blockchain.w3.eth.get_transaction_count(blockchain.ADMIN_ADDRESS),
+            "gas": 100000,
+            "gasPrice": blockchain.w3.eth.gas_price,
+        })
+        signed = blockchain.w3.eth.account.sign_transaction(tx, private_key=blockchain.ADMIN_PRIVATE_KEY)
+        blockchain.w3.eth.send_raw_transaction(signed.raw_transaction)
+        return {"ok": True, "address": checksum}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error actualizando token de pago: {e}")
 
 # ===============================================================================
 #  SOLICITUD DE FONDOS DE PRUEBA
