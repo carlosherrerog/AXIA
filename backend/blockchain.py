@@ -212,20 +212,19 @@ def get_full_watch_profile(token_id: int) -> dict:
         if marketplace_contract:
             try:
                 listing = marketplace_contract.functions.listings(token_id).call()
-                # Tupla: [seller, buyer, price, sellerDeposit, deadline, isP2P, watchmakerAppr, isShipped, assignedWM, verifyingWM, state]
-                state_code = listing[10]
+                # Tupla: [seller, buyer, price, sellerDeposit, isP2P, watchmakerApproved, isShipped, assignedWatchmaker, verifyingWatchmaker, state]
+                state_code = listing[9]
                 if state_code != 0: # 0 = NotListed
                     listing_db = {
                         "seller": listing[0],
                         "buyer": listing[1] if listing[1] != "0x0000000000000000000000000000000000000000" else None,
                         "price": int(listing[2]),
                         "seller_deposit": int(listing[3]),
-                        "shipping_deadline": listing[4],
-                        "is_p2p": listing[5],
-                        "watchmaker_approved": listing[6],
-                        "is_shipped": listing[7],
-                        "assigned_watchmaker": listing[8] if listing[8] != "0x0000000000000000000000000000000000000000" else None,
-                        "verifying_watchmaker": listing[9] if listing[9] != "0x0000000000000000000000000000000000000000" else None,
+                        "is_p2p": listing[4],
+                        "watchmaker_approved": listing[5],
+                        "is_shipped": listing[6],
+                        "assigned_watchmaker": listing[7] if listing[7] != "0x0000000000000000000000000000000000000000" else None,
+                        "verifying_watchmaker": listing[8] if listing[8] != "0x0000000000000000000000000000000000000000" else None,
                         "listing_state": state_code
                     }
             except Exception as e:
