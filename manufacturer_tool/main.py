@@ -760,7 +760,34 @@ def lock_nfc_chip() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 # WIDGETS HELPER
 # ─────────────────────────────────────────────────────────────────────────────
-def _apply_scrollbar_style(root: tk.Tk):
+_button_style_cache = set()
+
+def _get_button_style(bg, fg="#ffffff", hover=None, hover_fg=None, font=None, anchor="center"):
+    """Crea (o reutiliza) un ttk.Style con estos colores y devuelve su nombre.
+
+    tk.Button ignora 'bg' bajo el tema nativo Aqua de macOS, así que los
+    botones de la app usan ttk.Button con estilos con nombre (tema 'clam',
+    no nativo) en vez de tk.Button con bg/fg directos.
+    """
+    hover = hover or C["primary_h"]
+    hover_fg = hover_fg or fg
+    font = font or FONT_BODY
+    key_raw = f"{bg}_{fg}_{hover}_{hover_fg}_{font}_{anchor}"
+    name = f"S{abs(hash(key_raw))}.TButton"
+    if name not in _button_style_cache:
+        s = ttk.Style()
+        s.configure(name, background=bg, foreground=fg,
+                    font=font, anchor=anchor,
+                    relief="flat", borderwidth=0, focuscolor="",
+                    padding=(14, 7))
+        s.map(name,
+            background=[("active", hover), ("disabled", bg)],
+            foreground=[("active", hover_fg), ("disabled", C["muted"])],
+        )
+        _button_style_cache.add(name)
+    return name
+
+def _apply_ttk_styles(root: tk.Tk):
     s = ttk.Style(root)
     s.theme_use("clam")
     s.configure("Slim.Vertical.TScrollbar",
@@ -832,13 +859,11 @@ def styled_entry(parent, textvariable=None, width=30, show=None):
     return e
 
 def styled_button(parent, text, command, color=None, fg="#ffffff", width=None):
-    kw = dict(text=text, command=command, font=FONT_BODY,
-              fg=fg, bg=color or C["primary"],
-              activeforeground=fg, activebackground=C["primary_h"],
-              relief="flat", cursor="hand2", padx=14, pady=7)
+    style = _get_button_style(color or C["primary"], fg=fg)
+    kw = dict(text=text, command=command, style=style, cursor="hand2")
     if width:
         kw["width"] = width
-    return tk.Button(parent, **kw)
+    return ttk.Button(parent, **kw)
 
 def card_frame(parent, padx=28):
     """Frame tipo tarjeta con borde fino."""
@@ -1252,12 +1277,12 @@ class MainFrame(tk.Frame):
 
         # Cerrar sesión (derecha)
         logout_kw = dict(image=ICONS["logout"]) if "logout" in ICONS else {}
-        tk.Button(self.header, text=" Salir", compound="left",
-                  font=FONT_SMALL, fg=C["error"], bg=C["bg_alt"],
-                  activeforeground=C["error"], activebackground=C["surface"],
-                  relief="flat", cursor="hand2", command=self.on_logout,
-                  **logout_kw
-                  ).pack(side="right", padx=16)
+        logout_style = _get_button_style(C["bg_alt"], fg=C["error"],
+                                          hover=C["surface"], font=FONT_SMALL)
+        ttk.Button(self.header, text=" Salir", compound="left",
+                   style=logout_style, cursor="hand2", command=self.on_logout,
+                   **logout_kw
+                   ).pack(side="right", padx=16)
 
         # Chip de wallet
         self.wallet_container = tk.Frame(self.header, bg=C["bg_alt"])
@@ -1276,6 +1301,13 @@ class MainFrame(tk.Frame):
         self.sidebar.pack_propagate(False)
         separator(self.sidebar, C["border"]).pack(fill="x")
 
+        self._sidebar_style_inactive = _get_button_style(
+            C["bg_alt"], fg=C["text"], hover=C["surface2"],
+            font=FONT_BODY, anchor="w")
+        self._sidebar_style_active = _get_button_style(
+            C["surface2"], fg=C["primary"], hover=C["surface2"],
+            font=FONT_BODY, anchor="w")
+
         self._nav_buttons = {}
         for key, label, icon_key in [
             ("mint",     "Mintear Reloj",  "mint"),
@@ -1283,14 +1315,10 @@ class MainFrame(tk.Frame):
             ("settings", "Configuración",  "settings"),
         ]:
             img = ICONS.get(icon_key)
-            btn = tk.Button(self.sidebar,
+            btn = ttk.Button(self.sidebar,
                             text=f"   {label}",
                             image=img, compound="left" if img else "none",
-                            font=FONT_BODY, anchor="w",
-                            fg=C["text"], bg=C["bg_alt"],
-                            activeforeground=C["primary"],
-                            activebackground=C["surface2"],
-                            relief="flat", cursor="hand2",
+                            style=self._sidebar_style_inactive, cursor="hand2",
                             command=lambda k=key: self.show_tab(k))
             btn.pack(fill="x", ipady=12)
             separator(self.sidebar, C["border"]).pack(fill="x")
@@ -1312,9 +1340,9 @@ class MainFrame(tk.Frame):
     def show_tab(self, key):
         if self._current_tab:
             self._tabs[self._current_tab].pack_forget()
-            self._nav_buttons[self._current_tab].config(bg=C["bg_alt"], fg=C["text"])
+            self._nav_buttons[self._current_tab].configure(style=self._sidebar_style_inactive)
         self._current_tab = key
-        self._nav_buttons[key].config(bg=C["surface2"], fg=C["primary"])
+        self._nav_buttons[key].configure(style=self._sidebar_style_active)
         tab = self._tabs[key]
         tab.pack(fill="both", expand=True)
         if hasattr(tab, "on_show"):
@@ -1345,11 +1373,11 @@ class MainFrame(tk.Frame):
                      bg=C["bg_alt"]).pack(side="left")
             tk.Label(pill, text=f" {short}", font=FONT_MONO,
                      fg=C["text"], bg=C["bg_alt"]).pack(side="left", padx=(2, 4))
-            tk.Button(pill, text="Cambiar", font=FONT_SMALL,
-                      fg=C["text2"], bg=C["bg_alt"],
-                      activeforeground=C["primary"], activebackground=C["surface"],
-                      relief="flat", cursor="hand2",
-                      command=self._open_connect_dialog).pack(side="left")
+            cambiar_style = _get_button_style(
+                C["bg_alt"], fg=C["text2"], hover=C["surface"],
+                hover_fg=C["primary"], font=FONT_SMALL)
+            ttk.Button(pill, text="Cambiar", style=cambiar_style, cursor="hand2",
+                       command=self._open_connect_dialog).pack(side="left")
             if mismatch:
                 tk.Label(self.wallet_container, text="  ⚠ no coincide",
                          font=FONT_SMALL, fg=C["warning"],
@@ -1462,13 +1490,11 @@ class MintTab(tk.Frame):
 
         # Botón Mint
         separator(inner).pack(fill="x", padx=28, pady=14)
-        self.mint_btn = tk.Button(inner, text="⬡  MINTEAR RELOJ EN BLOCKCHAIN",
-                                  command=self._start_mint,
-                                  font=("Segoe UI", 12, "bold"),
-                                  fg="#ffffff", bg=C["primary"],
-                                  activeforeground="#ffffff",
-                                  activebackground=C["primary_h"],
-                                  relief="flat", cursor="hand2")
+        mint_style = _get_button_style(C["primary"], fg="#ffffff",
+                                        font=("Segoe UI", 12, "bold"))
+        self.mint_btn = ttk.Button(inner, text="⬡  MINTEAR RELOJ EN BLOCKCHAIN",
+                                    command=self._start_mint,
+                                    style=mint_style, cursor="hand2")
         self.mint_btn.pack(fill="x", padx=28, pady=(0, 8), ipady=12)
 
         self.log_var   = tk.StringVar(value="")
@@ -2006,7 +2032,7 @@ class AxiaMfgApp(tk.Tk):
         self.geometry("1080x720")
         self.minsize(860, 560)
         self.configure(bg=C["bg"])
-        _apply_scrollbar_style(self)
+        _apply_ttk_styles(self)
 
         ico = BASE_DIR / "axia.ico"
         if ico.exists():
