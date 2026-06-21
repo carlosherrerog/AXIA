@@ -1,6 +1,8 @@
 # Variables de entorno (claves API, claves privadas, secretos)
 /backend/.env
 /blockchain/.env
+/manufacturer_tool/.env
+/frontend/.env
 
 # Base de datos local
 backend/axia_app.db
