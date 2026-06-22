@@ -8,12 +8,13 @@ El mercado secundario de la alta relojería mueve miles de millones de euros anu
 
 ## Arquitectura del sistema
 
-El proyecto es un monorepo con tres servicios independientes desplegables:
+El proyecto es un monorepo con cuatro componentes:
 
 ```
-/frontend     React Native + Expo — app web y móvil (Android/iOS)
-/backend      FastAPI (Python) — API REST + WebSockets + lógica de negocio
-/blockchain   Solidity + Hardhat — contratos inteligentes en Polygon
+/frontend           React Native + Expo — app web y móvil (Android/iOS)
+/backend            FastAPI (Python) — API REST + WebSockets + lógica de negocio
+/blockchain         Solidity + Hardhat — contratos inteligentes en Polygon
+/manufacturer_tool  Python + Tkinter — app de escritorio del fabricante (minteo + NFC)
 ```
 
 **Despliegue en producción:**
@@ -150,8 +151,14 @@ El sistema operativo del móvil (Android/iOS) detecta el NDEF automáticamente y
 
 /blockchain
   contracts/                  Contratos Solidity (WatchNFT, WatchMarketplace, WatchAuction...)
-  scripts/deploy.js           Script de despliegue de los 5 contratos en orden
-  hardhat.config.js           Configuración de redes (localhost, Polygon mainnet)
+  scripts/deploy.js           Script de despliegue de los 4 contratos en orden
+  hardhat.config.js           Configuración de redes (localhost, Amoy, Polygon mainnet)
+```
+
+```
+/manufacturer_tool
+  main.py                      App Tkinter: login, minteo, stock, lectura/escritura NFC
+  abi/                         ABIs de los contratos compilados
 ```
 
 ## Ejecución en local
